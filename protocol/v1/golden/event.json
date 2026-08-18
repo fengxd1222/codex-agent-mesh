@@ -1,0 +1,9 @@
+{
+  "event_id": "event-001",
+  "event_type": "state_changed",
+  "kind": "event",
+  "payload": { "state": "RUNNING" },
+  "seq": 1,
+  "task_id": "task-001",
+  "version": 1
+}

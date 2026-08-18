@@ -1,0 +1,21 @@
+{
+  "jsonrpc": "2.0",
+  "id": "handshake-2",
+  "result": {
+    "kind": "handshake_ready",
+    "health": {
+      "kind": "daemon_health",
+      "daemon_state": "READY",
+      "install_id": "install-001",
+      "consumer_id": "consumer-001",
+      "daemon_version": "0.1.0",
+      "daemon_generation": 7,
+      "wire_major": 1,
+      "wire_minor": 0,
+      "protocol_version": 1,
+      "data_schema_version": 1,
+      "started_at_ms": 1000
+    },
+    "server_proof": "3d479618e25e682f8eb0761972f54c5007df3a4fba31178cf3b235a40353dc20"
+  }
+}

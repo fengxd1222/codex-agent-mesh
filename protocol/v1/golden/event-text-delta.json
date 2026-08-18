@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-002",
+  "task_id": "task-001",
+  "seq": 2,
+  "event_type": "text_delta",
+  "payload": { "text": "deterministic output" }
+}

@@ -1,0 +1,7 @@
+{
+  "case_id": "case-001",
+  "component": "fake-adapter",
+  "kind": "improvement_case",
+  "status": "OBSERVING",
+  "version": 1
+}

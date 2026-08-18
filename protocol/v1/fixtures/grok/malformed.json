@@ -1,0 +1,35 @@
+[
+  "not-json",
+  {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "error": {
+      "code": -32600,
+      "message": "invalid request"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "session/update",
+    "params": {
+      "sessionId": "session-fixture-002",
+      "update": {
+        "sessionUpdate": "unknown_shape"
+      }
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "session/update",
+    "params": {
+      "sessionId": "session-fixture-002",
+      "update": {
+        "sessionUpdate": "agent_message_chunk",
+        "content": {
+          "type": "text",
+          "text": "deterministic malformed tail"
+        }
+      }
+    }
+  }
+]

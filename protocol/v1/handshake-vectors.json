@@ -1,0 +1,46 @@
+[
+  {
+    "name": "wire-v1.0-mutual-proof",
+    "encoding": "Each field is canonical unsigned base-10 ASCII or UTF-8 text, prefixed by its uint32 little-endian byte length. Numeric zero is exactly 0; no sign or leading zero is allowed.",
+    "client_domain": "codex-agent-mesh\u0000client-proof-v1\u0000",
+    "server_domain": "codex-agent-mesh\u0000server-proof-v1\u0000",
+    "test_hmac_material_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+    "fields": [
+      ["wire_major", "1"],
+      ["min_minor", "0"],
+      ["max_minor", "0"],
+      ["selected_minor", "0"],
+      ["protocol_version", "1"],
+      ["install_id", "install-001"],
+      ["client_kind", "mcp-bridge-native"],
+      ["client_version", "0.1.0"],
+      [
+        "client_nonce",
+        "1111111111111111111111111111111111111111111111111111111111111111"
+      ],
+      ["max_response_frame", "8388608"],
+      ["daemon_version", "0.1.0"],
+      ["daemon_generation", "7"],
+      [
+        "server_nonce",
+        "2222222222222222222222222222222222222222222222222222222222222222"
+      ],
+      ["request_frame_bytes", "1048576"],
+      ["response_frame_bytes", "8388608"],
+      ["max_in_flight", "16"],
+      ["max_events_per_page", "200"],
+      ["handshake_timeout_ms", "2000"],
+      ["health_timeout_ms", "2000"],
+      ["startup_timeout_ms", "15000"],
+      ["query_timeout_ms", "5000"],
+      ["mutation_timeout_ms", "10000"],
+      ["max_wait_ms", "30000"],
+      ["write_timeout_ms", "5000"],
+      ["stderr_budget_bytes", "65536"],
+      ["stderr_line_bytes", "4096"]
+    ],
+    "transcript_hex": "010000003101000000300100000030010000003001000000310b000000696e7374616c6c2d303031110000006d63702d6272696467652d6e617469766505000000302e312e304000000031313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131313131070000003833383836303805000000302e312e3001000000374000000032323232323232323232323232323232323232323232323232323232323232323232323232323232323232323232323232323232323232323232323232323232070000003130343835373607000000383338383630380200000031360300000032303004000000323030300400000032303030050000003135303030040000003530303005000000313030303005000000333030303004000000353030300500000036353533360400000034303936",
+    "client_proof": "480ab4affd0734c367f0949c62aabcc96c432a347485606bfa64dc872af1fdcd",
+    "server_proof": "3d479618e25e682f8eb0761972f54c5007df3a4fba31178cf3b235a40353dc20"
+  }
+]

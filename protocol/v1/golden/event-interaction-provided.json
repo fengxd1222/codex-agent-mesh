@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-interaction-provided-001",
+  "task_id": "task-001",
+  "attempt_id": "attempt-001",
+  "seq": 14,
+  "event_type": "interaction_decided",
+  "payload": {
+    "interaction_id": "interaction-input-001",
+    "status": "PROVIDED",
+    "response_kind": "text"
+  }
+}

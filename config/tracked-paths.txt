@@ -1,0 +1,21 @@
+# Paths that may be explicitly staged for this product. This is an allowlist,
+# not an instruction to stage every matching path.
+.editorconfig
+.gitattributes
+.gitignore
+.prettierignore
+AGENTS.md
+Cargo.lock
+Cargo.toml
+README.md
+config/**
+crates/**
+package-lock.json
+package.json
+packages/**
+plugins/codex-agent-mesh/**
+protocol/**
+rust-toolchain.toml
+scripts/**
+tests/**
+eslint.config.mjs

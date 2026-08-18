@@ -1,0 +1,12 @@
+{
+  "acp_sidecar": "disabled",
+  "adapter": "grok",
+  "auto_update": "managed_update_is_explicit_command_only_in_1_0_4",
+  "cancel": "session_cancel_method_not_found_in_1_0_4_live",
+  "fallback_effort_values": ["low", "medium", "high"],
+  "fallback_note": "help documents streaming-json as NDJSON of the agent native ACP session updates; fallback decode reuses the ACP update decoder",
+  "fallback_transport": "stream_json",
+  "id": "grok-acp-1.0.4-v1",
+  "proven_version": "1.0.4",
+  "transport": "acp"
+}

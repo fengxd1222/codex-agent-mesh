@@ -1,0 +1,11 @@
+{
+  "id": "rpc-improvement-001",
+  "jsonrpc": "2.0",
+  "method": "mesh.improvement_case",
+  "params": {
+    "action": "inspect",
+    "case_id": "case-001",
+    "kind": "improvement_case",
+    "version": 1
+  }
+}

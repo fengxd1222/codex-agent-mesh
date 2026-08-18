@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "kind": "task_snapshot",
+  "task_id": "queued-001",
+  "state": "QUEUED",
+  "generation": 0,
+  "last_event_seq": 0
+}

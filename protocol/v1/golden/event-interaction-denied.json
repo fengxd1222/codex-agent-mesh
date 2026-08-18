@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-interaction-denied-001",
+  "task_id": "task-001",
+  "seq": 15,
+  "event_type": "interaction_decided",
+  "payload": {
+    "interaction_id": "interaction-001",
+    "status": "DENIED",
+    "response_kind": "deny"
+  }
+}

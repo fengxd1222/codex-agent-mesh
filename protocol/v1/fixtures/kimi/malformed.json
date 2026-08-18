@@ -1,0 +1,31 @@
+[
+  "not-json",
+  {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "error": {
+      "code": -32700,
+      "message": "parse error"
+    }
+  },
+  {
+    "jsonrpc": "2.0",
+    "method": "session/update",
+    "params": {
+      "sessionId": "session-fixture-002",
+      "update": {
+        "sessionUpdate": "unknown_shape"
+      }
+    }
+  },
+  {
+    "sessionId": "session-fixture-002",
+    "update": {
+      "sessionUpdate": "agent_message_chunk",
+      "content": {
+        "type": "text",
+        "text": "bare frame malformed tail"
+      }
+    }
+  }
+]

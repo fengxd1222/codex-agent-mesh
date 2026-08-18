@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-007",
+  "task_id": "task-001",
+  "seq": 7,
+  "severity": "WARNING",
+  "event_type": "warning",
+  "payload": { "warning": "Adapter reported a deterministic warning." }
+}

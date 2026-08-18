@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-attempt-started-001",
+  "task_id": "task-001",
+  "attempt_id": "attempt-001",
+  "seq": 10,
+  "event_type": "attempt_started",
+  "payload": {
+    "attempt_id": "attempt-001",
+    "ordinal": 1
+  }
+}

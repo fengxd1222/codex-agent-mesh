@@ -1,0 +1,15 @@
+{
+  "adapter": "claude",
+  "adapter_instance_id": "claude:local:default:2ea47b1b02df933117435dcc0a6bd1172186dd4194d0b29c6d4d8e5b574a64fb",
+  "capabilities": ["streaming", "cancellation", "approvals", "usage"],
+  "degradation_reason": "local live contract not recorded",
+  "executable_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "executable_path": "claude.exe",
+  "executable_version": "2.1.220",
+  "kind": "adapter_capabilities",
+  "permission_health": "SUPPORTED",
+  "status": "DEGRADED",
+  "supported_interactions": ["approval"],
+  "transport": "stream_json",
+  "version": 1
+}

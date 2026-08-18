@@ -1,0 +1,9 @@
+{
+  "jsonrpc": "2.0",
+  "id": 4,
+  "result": {
+    "kind": "list_agents_result",
+    "agents": [],
+    "config_version": 1
+  }
+}

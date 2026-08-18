@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-005",
+  "task_id": "task-001",
+  "seq": 5,
+  "event_type": "interaction_decided",
+  "payload": {
+    "interaction_id": "interaction-001",
+    "status": "APPROVED",
+    "response_kind": "approve"
+  }
+}

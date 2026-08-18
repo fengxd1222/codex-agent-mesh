@@ -1,0 +1,11 @@
+[
+  {
+    "session_id": "session-fixture-002",
+    "subtype": "init",
+    "type": "system"
+  },
+  "not-json",
+  {
+    "type": "unknown_shape"
+  }
+]

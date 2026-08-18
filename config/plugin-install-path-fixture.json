@@ -1,0 +1,6 @@
+{
+  "installedPluginRoot": "C:\\Users\\Test User\\plugins\\codex-agent-mesh",
+  "callerWorkingDirectory": "C:\\Users\\Test User\\Documents\\different-caller-cwd",
+  "expectedServerCwd": ".",
+  "status": "isolated-packaged-bridge-smoke-implemented; clean-profile-install-remains-not-run"
+}

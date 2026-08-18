@@ -1,0 +1,39 @@
+{
+  "name": "codex-agent-mesh",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows-first local delegation control plane for Codex.",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/mcp-bridge",
+    "packages/dashboard"
+  ],
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "protocol:check": "npm run build --workspace packages/mcp-bridge && npm test --workspace packages/mcp-bridge && node scripts/check-protocol-fixtures.mjs && node scripts/check-acceptance-matrix.mjs && cargo test -p mesh-daemon protocol && cargo test -p mesh-daemon fake_adapter",
+    "package:verify": "pwsh -NoProfile -File scripts/verify-package-allowlist.ps1",
+    "plugin:package": "pwsh -NoProfile -File scripts/package-plugin.ps1",
+    "plugin:artifact:verify": "pwsh -NoProfile -File scripts/verify-plugin-artifact.ps1",
+    "plugin:artifact:fixture": "pwsh -NoProfile -File scripts/test-plugin-artifact.ps1",
+    "plugin:artifact:smoke": "node scripts/test-plugin-artifact-runtime.mjs release/codex-agent-mesh",
+    "plugin:path:fixture": "pwsh -NoProfile -File scripts/test-plugin-install-paths.ps1",
+    "tracked:verify": "pwsh -NoProfile -File scripts/verify-tracked-allowlist.ps1",
+    "tracked:test": "pwsh -NoProfile -File scripts/test-tracked-allowlist.ps1"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.33.0",
+    "@types/node": "22.15.3",
+    "eslint": "9.33.0",
+    "esbuild": "0.28.1",
+    "prettier": "3.6.2",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.39.0"
+  }
+}

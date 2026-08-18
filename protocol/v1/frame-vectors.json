@@ -1,0 +1,29 @@
+[
+  {
+    "name": "zero-length",
+    "prefix_hex": "00000000",
+    "payload_hex": "",
+    "valid": false,
+    "error": "IPC_FRAME_INVALID"
+  },
+  {
+    "name": "invalid-utf8",
+    "prefix_hex": "02000000",
+    "payload_hex": "c328",
+    "valid": false,
+    "error": "IPC_FRAME_INVALID"
+  },
+  { "name": "request-limit", "declared_length": 1048576, "valid": true },
+  {
+    "name": "request-limit-plus-one",
+    "declared_length": 1048577,
+    "valid": false,
+    "error": "IPC_FRAME_TOO_LARGE"
+  },
+  {
+    "name": "uint32-maximum",
+    "prefix_hex": "ffffffff",
+    "valid": false,
+    "error": "IPC_FRAME_TOO_LARGE"
+  }
+]

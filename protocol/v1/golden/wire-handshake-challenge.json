@@ -1,0 +1,29 @@
+{
+  "jsonrpc": "2.0",
+  "id": "handshake-1",
+  "result": {
+    "kind": "handshake_challenge",
+    "selected_major": 1,
+    "selected_minor": 0,
+    "protocol_version": 1,
+    "install_id": "install-001",
+    "daemon_version": "0.1.0",
+    "daemon_generation": 7,
+    "server_nonce": "2222222222222222222222222222222222222222222222222222222222222222",
+    "negotiated_limits": {
+      "request_frame_bytes": 1048576,
+      "response_frame_bytes": 8388608,
+      "max_in_flight": 16,
+      "max_events_per_page": 200,
+      "handshake_timeout_ms": 2000,
+      "health_timeout_ms": 2000,
+      "startup_timeout_ms": 15000,
+      "query_timeout_ms": 5000,
+      "mutation_timeout_ms": 10000,
+      "max_wait_ms": 30000,
+      "write_timeout_ms": 5000,
+      "stderr_budget_bytes": 65536,
+      "stderr_line_bytes": 4096
+    }
+  }
+}

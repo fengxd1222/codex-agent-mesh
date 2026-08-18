@@ -1,0 +1,13 @@
+# Exact inventory of a built, installable plugin artifact. No wildcards.
+.codex-plugin/plugin.json
+.mcp.json
+skills/codex-agent-mesh/SKILL.md
+skills/codex-agent-mesh/references/install-and-configure.md
+runtime/mcp-bridge/index.js
+runtime/mcp-bridge/native-transport.js
+runtime/mcp-bridge/package.json
+runtime/mcp-bridge/protocol/v1/schema.json
+bin/windows-x64/mesh-daemon.exe
+ARTIFACT-METADATA.json
+SBOM.cdx.json
+SHA256SUMS

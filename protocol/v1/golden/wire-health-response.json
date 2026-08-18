@@ -1,0 +1,35 @@
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "kind": "health_result",
+    "health": {
+      "kind": "daemon_health",
+      "daemon_state": "RUNNING",
+      "install_id": "install-001",
+      "consumer_id": "consumer-001",
+      "daemon_version": "0.1.0",
+      "daemon_generation": 7,
+      "wire_major": 1,
+      "wire_minor": 0,
+      "protocol_version": 1,
+      "data_schema_version": 1,
+      "started_at_ms": 1000
+    },
+    "negotiated_limits": {
+      "request_frame_bytes": 1048576,
+      "response_frame_bytes": 8388608,
+      "max_in_flight": 16,
+      "max_events_per_page": 200,
+      "handshake_timeout_ms": 2000,
+      "health_timeout_ms": 2000,
+      "startup_timeout_ms": 15000,
+      "query_timeout_ms": 5000,
+      "mutation_timeout_ms": 10000,
+      "max_wait_ms": 30000,
+      "write_timeout_ms": 5000,
+      "stderr_budget_bytes": 65536,
+      "stderr_line_bytes": 4096
+    }
+  }
+}

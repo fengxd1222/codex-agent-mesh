@@ -1,0 +1,6 @@
+# Exact source inventory eligible for deterministic packaging. Generated files
+# never live below this source plugin directory.
+.codex-plugin/plugin.json
+.mcp.json
+skills/codex-agent-mesh/SKILL.md
+skills/codex-agent-mesh/references/install-and-configure.md

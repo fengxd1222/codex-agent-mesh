@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-retry-scheduled-001",
+  "task_id": "task-001",
+  "attempt_id": "attempt-001",
+  "seq": 12,
+  "event_type": "retry_scheduled",
+  "payload": {
+    "prior_generation": 0,
+    "retry_at_ms": 2000
+  }
+}

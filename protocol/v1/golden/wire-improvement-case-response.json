@@ -1,0 +1,18 @@
+{
+  "id": "rpc-improvement-001",
+  "jsonrpc": "2.0",
+  "result": {
+    "case": {
+      "case_id": "case-001",
+      "component": "fake-adapter",
+      "kind": "improvement_case",
+      "parent_config_version": 1,
+      "rollback_count": 0,
+      "status": "OBSERVING",
+      "version": 1
+    },
+    "feature_enabled": false,
+    "outcome": "INSPECTED",
+    "kind": "improvement_case_result"
+  }
+}

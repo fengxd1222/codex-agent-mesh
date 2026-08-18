@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "mesh.wait_task",
+  "params": {
+    "task_id": "task-001",
+    "after_seq": 0,
+    "limit": 200,
+    "wait_ms": 30000
+  }
+}

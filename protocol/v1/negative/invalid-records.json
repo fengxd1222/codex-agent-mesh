@@ -1,0 +1,542 @@
+[
+  { "name": "unknown-kind", "value": { "version": 1, "kind": "future" } },
+  { "name": "unknown-version", "value": { "version": 2, "kind": "future" } },
+  {
+    "name": "unknown-top-level-field",
+    "value": {
+      "version": 1,
+      "kind": "task_snapshot",
+      "task_id": "task-1",
+      "state": "QUEUED",
+      "generation": 1,
+      "extra": true
+    }
+  },
+  {
+    "name": "invalid-state",
+    "value": {
+      "version": 1,
+      "kind": "task_snapshot",
+      "task_id": "task-1",
+      "state": "MAYBE",
+      "generation": 1
+    }
+  },
+  {
+    "name": "caller-supplied-task-id",
+    "value": {
+      "version": 1,
+      "kind": "task_request",
+      "task_id": "task-1",
+      "command_key": "cmd-1",
+      "role": "research",
+      "objective": "Bounded objective",
+      "context_refs": [],
+      "quality": "standard",
+      "effort": "medium",
+      "timeout_seconds": 300,
+      "priority": 0,
+      "workspace": {
+        "path": "D:/repo",
+        "base_commit": "0123456789012345678901234567890123456789",
+        "mode": "read_only"
+      },
+      "effect_profile": "READ_ONLY",
+      "permission_policy": "deny_writes"
+    }
+  },
+  {
+    "name": "forbidden-model",
+    "value": {
+      "version": 1,
+      "kind": "task_request",
+      "command_key": "cmd-1",
+      "role": "research",
+      "objective": "Bounded objective",
+      "context_refs": [],
+      "quality": "standard",
+      "effort": "medium",
+      "timeout_seconds": 300,
+      "priority": 0,
+      "workspace": {
+        "path": "D:/repo",
+        "base_commit": "0123456789012345678901234567890123456789",
+        "mode": "read_only"
+      },
+      "effect_profile": "READ_ONLY",
+      "permission_policy": "deny_writes",
+      "model": "forbidden"
+    }
+  },
+  {
+    "name": "forbidden-nested-model",
+    "value": {
+      "version": 1,
+      "kind": "task_request",
+      "command_key": "cmd-1",
+      "role": "research",
+      "objective": "Bounded objective",
+      "context_refs": [
+        { "kind": "file", "locator": "README.md", "model": "forbidden" }
+      ],
+      "quality": "standard",
+      "effort": "medium",
+      "timeout_seconds": 300,
+      "priority": 0,
+      "workspace": {
+        "path": "D:/repo",
+        "base_commit": "0123456789012345678901234567890123456789",
+        "mode": "read_only"
+      },
+      "effect_profile": "READ_ONLY",
+      "permission_policy": "deny_writes"
+    }
+  },
+  {
+    "name": "review-ack-missing-token",
+    "value": {
+      "version": 1,
+      "kind": "command",
+      "action": "review_ack",
+      "command_key": "cmd-review",
+      "task_id": "task-1",
+      "result_id": "result-1",
+      "result_version": 1,
+      "verdict": "ACCEPTED"
+    }
+  },
+  {
+    "name": "cancel-has-review-fields",
+    "value": {
+      "version": 1,
+      "kind": "command",
+      "action": "cancel",
+      "command_key": "cmd-cancel",
+      "task_id": "task-1",
+      "ack_token": "ack-1"
+    }
+  },
+  {
+    "name": "text-response-missing-text",
+    "value": {
+      "version": 1,
+      "kind": "command",
+      "action": "interaction_response",
+      "command_key": "cmd-input",
+      "task_id": "task-1",
+      "interaction_id": "interaction-1",
+      "generation": 1,
+      "operation_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "nonce": "nonce-1",
+      "response": { "kind": "text" }
+    }
+  },
+  {
+    "name": "invalid-operation-digest",
+    "value": {
+      "version": 1,
+      "kind": "interaction",
+      "interaction_id": "interaction-1",
+      "task_id": "task-1",
+      "attempt_id": "attempt-1",
+      "adapter_instance_id": "fake-local",
+      "generation": 1,
+      "capability_class": "approval",
+      "operation_digest": "not-a-digest",
+      "config_version": 1,
+      "policy_version": 1,
+      "created_at_ms": 1,
+      "expires_at_ms": 2,
+      "nonce": "nonce-1",
+      "status": "PENDING"
+    }
+  },
+  {
+    "name": "degraded-adapter-without-reason",
+    "value": {
+      "version": 1,
+      "kind": "adapter_capabilities",
+      "adapter_instance_id": "fake-local",
+      "adapter": "fake",
+      "status": "DEGRADED",
+      "executable_path": "fake-agent.exe",
+      "executable_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "executable_version": "0.1.0",
+      "transport": "fake",
+      "capabilities": [],
+      "supported_interactions": [],
+      "permission_health": "DEGRADED",
+      "degradation_reason": ""
+    }
+  },
+  {
+    "name": "fractional-event-sequence",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-1",
+      "task_id": "task-1",
+      "seq": 1.5,
+      "event_type": "state_changed",
+      "payload": { "state": "RUNNING" }
+    }
+  },
+  {
+    "name": "config-concurrency-out-of-bounds",
+    "value": {
+      "version": 1,
+      "kind": "config",
+      "config_version": 1,
+      "settings": {
+        "enabled_adapters": { "claude": false, "grok": false, "kimi": false },
+        "executable_paths": { "claude": null, "grok": null, "kimi": null },
+        "transport_priority": {
+          "claude": ["native_json"],
+          "grok": ["acp"],
+          "kimi": ["acp"]
+        },
+        "role_bindings": {
+          "implementation": "claude",
+          "research": "grok",
+          "review": "kimi"
+        },
+        "concurrency": { "global": 100, "per_adapter": 1 },
+        "quality": { "default": "standard", "allowed": ["standard"] },
+        "effort": { "default": "medium", "allowed": ["medium"] },
+        "review_chain": { "enabled": false, "reviewer": "kimi" },
+        "retention": {
+          "acknowledged_result_days": 90,
+          "acknowledged_blob_terminal_days": 14,
+          "acknowledged_blob_post_ack_days": 7,
+          "successful_worktree_post_ack_days": 7,
+          "non_success_worktree_terminal_days": 30,
+          "metrics_days": 90
+        },
+        "improvement_enabled": false
+      }
+    }
+  },
+  {
+    "name": "config-default-outside-allowed-bounds",
+    "value": {
+      "version": 1,
+      "kind": "config",
+      "config_version": 1,
+      "settings": {
+        "enabled_adapters": { "claude": false, "grok": false, "kimi": false },
+        "executable_paths": { "claude": null, "grok": null, "kimi": null },
+        "transport_priority": {
+          "claude": ["native_json"],
+          "grok": ["acp"],
+          "kimi": ["acp"]
+        },
+        "role_bindings": {
+          "implementation": "claude",
+          "research": "grok",
+          "review": "kimi"
+        },
+        "concurrency": { "global": 3, "per_adapter": 1 },
+        "quality": { "default": "high", "allowed": ["standard"] },
+        "effort": { "default": "high", "allowed": ["medium"] },
+        "review_chain": { "enabled": false, "reviewer": "kimi" },
+        "retention": {
+          "acknowledged_result_days": 90,
+          "acknowledged_blob_terminal_days": 14,
+          "acknowledged_blob_post_ack_days": 7,
+          "successful_worktree_post_ack_days": 7,
+          "non_success_worktree_terminal_days": 30,
+          "metrics_days": 90
+        },
+        "improvement_enabled": false
+      }
+    }
+  },
+  {
+    "name": "allow-current-directory-not-boolean",
+    "value": {
+      "version": 1,
+      "kind": "config",
+      "config_version": 1,
+      "settings": {
+        "enabled_adapters": { "claude": false, "grok": false, "kimi": false },
+        "executable_paths": { "claude": null, "grok": null, "kimi": null },
+        "transport_priority": {
+          "claude": ["native_json"],
+          "grok": ["acp"],
+          "kimi": ["acp"]
+        },
+        "role_bindings": {
+          "implementation": "claude",
+          "research": "grok",
+          "review": "kimi"
+        },
+        "concurrency": { "global": 3, "per_adapter": 1 },
+        "quality": { "default": "standard", "allowed": ["standard"] },
+        "effort": { "default": "medium", "allowed": ["medium"] },
+        "review_chain": { "enabled": false, "reviewer": "kimi" },
+        "retention": {
+          "acknowledged_result_days": 90,
+          "acknowledged_blob_terminal_days": 14,
+          "acknowledged_blob_post_ack_days": 7,
+          "successful_worktree_post_ack_days": 7,
+          "non_success_worktree_terminal_days": 30,
+          "metrics_days": 90
+        },
+        "improvement_enabled": false,
+        "allow_current_directory": "yes"
+      }
+    }
+  },
+  {
+    "name": "second-result-version",
+    "value": {
+      "version": 1,
+      "kind": "result",
+      "result_id": "result-1",
+      "task_id": "task-1",
+      "state": "SUCCEEDED",
+      "result_version": 2,
+      "ack_token": "ack-1",
+      "ack_status": "PENDING"
+    }
+  },
+  {
+    "name": "review-second-result-version",
+    "value": {
+      "version": 1,
+      "kind": "command",
+      "action": "review_ack",
+      "command_key": "cmd-review-2",
+      "task_id": "task-1",
+      "result_id": "result-1",
+      "result_version": 2,
+      "ack_token": "ack-1",
+      "verdict": "ACCEPTED"
+    }
+  },
+  {
+    "name": "wire-null-id",
+    "value": {
+      "jsonrpc": "2.0",
+      "id": null,
+      "method": "mesh.health",
+      "params": {}
+    }
+  },
+  {
+    "name": "wire-unknown-method",
+    "value": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "mesh.improvement_case",
+      "params": {}
+    }
+  },
+  {
+    "name": "wire-wait-missing-after-seq",
+    "value": {
+      "jsonrpc": "2.0",
+      "id": 2,
+      "method": "mesh.wait_task",
+      "params": { "task_id": "task-1", "limit": 200, "wait_ms": 0 }
+    }
+  },
+  {
+    "name": "wire-wait-limit-too-large",
+    "value": {
+      "jsonrpc": "2.0",
+      "id": 3,
+      "method": "mesh.wait_task",
+      "params": {
+        "task_id": "task-1",
+        "after_seq": 0,
+        "limit": 201,
+        "wait_ms": 0
+      }
+    }
+  },
+  {
+    "name": "wire-envelope-extra-field",
+    "value": {
+      "jsonrpc": "2.0",
+      "id": 4,
+      "method": "mesh.health",
+      "params": {},
+      "command_key": "cmd-wrong-layer"
+    }
+  },
+  {
+    "name": "wire-response-has-result-and-error",
+    "value": {
+      "jsonrpc": "2.0",
+      "id": 5,
+      "result": {
+        "kind": "list_agents_result",
+        "agents": [],
+        "config_version": 1
+      },
+      "error": {
+        "code": -32000,
+        "message": "invalid",
+        "data": {
+          "error": {
+            "version": 1,
+            "kind": "error",
+            "code": "VALIDATION_FAILED",
+            "retry_class": "DETERMINISTIC_FAILURE",
+            "effect_class": "NO_EFFECT",
+            "lifecycle": "BEFORE_PROCESS_CREATION",
+            "evidence": "invalid_request",
+            "message": "invalid"
+          },
+          "diagnostic_ref": "diagnostic-1"
+        }
+      }
+    }
+  },
+  {
+    "name": "event-type-payload-mismatch",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-mismatch",
+      "task_id": "task-1",
+      "seq": 1,
+      "event_type": "usage",
+      "payload": { "state": "RUNNING" }
+    }
+  },
+  {
+    "name": "unknown-setup-removal-code",
+    "value": {
+      "version": 1,
+      "kind": "error",
+      "code": "SETUP_REMOVE",
+      "retry_class": "SAFE_PRE_DISPATCH",
+      "effect_class": "NO_EFFECT",
+      "lifecycle": "BEFORE_PROCESS_CREATION",
+      "evidence": "install_record_removing_fence",
+      "message": "The retained installation is being removed."
+    }
+  },
+  {
+    "name": "attempt-started-missing-ordinal",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-attempt-missing-ordinal",
+      "task_id": "task-1",
+      "attempt_id": "attempt-1",
+      "seq": 1,
+      "event_type": "attempt_started",
+      "payload": { "attempt_id": "attempt-1" }
+    }
+  },
+  {
+    "name": "attempt-started-zero-ordinal",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-attempt-zero-ordinal",
+      "task_id": "task-1",
+      "attempt_id": "attempt-1",
+      "seq": 1,
+      "event_type": "attempt_started",
+      "payload": { "attempt_id": "attempt-1", "ordinal": 0 }
+    }
+  },
+  {
+    "name": "dispatch-phase-unknown-phase",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-dispatch-bad-phase",
+      "task_id": "task-1",
+      "attempt_id": "attempt-1",
+      "seq": 1,
+      "event_type": "dispatch_phase",
+      "payload": { "phase": "PROCESS_EXITED" }
+    }
+  },
+  {
+    "name": "retry-scheduled-source-field-not-normalized",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-retry-source-field",
+      "task_id": "task-1",
+      "seq": 1,
+      "event_type": "retry_scheduled",
+      "payload": { "prior_generation": 0, "retry_at": 2000 }
+    }
+  },
+  {
+    "name": "recovery-required-wrong-action",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-recovery-wrong-action",
+      "task_id": "task-1",
+      "seq": 1,
+      "event_type": "recovery_required",
+      "payload": { "action": "retry_task" }
+    }
+  },
+  {
+    "name": "interaction-text-response-misclassified-as-approved",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-input-misclassified",
+      "task_id": "task-1",
+      "seq": 1,
+      "event_type": "interaction_decided",
+      "payload": {
+        "interaction_id": "interaction-1",
+        "status": "APPROVED",
+        "response_kind": "text"
+      }
+    }
+  },
+  {
+    "name": "interaction-provided-missing-text-discriminator",
+    "value": {
+      "version": 1,
+      "kind": "event",
+      "event_id": "event-input-missing-kind",
+      "task_id": "task-1",
+      "seq": 1,
+      "event_type": "interaction_decided",
+      "payload": {
+        "interaction_id": "interaction-1",
+        "status": "PROVIDED"
+      }
+    }
+  },
+  {
+    "name": "inspect-dashboard-bootstrap-url-must-be-loopback-token-url",
+    "value": {
+      "jsonrpc": "2.0",
+      "id": 6,
+      "result": {
+        "kind": "inspect_task_result",
+        "task": {
+          "version": 1,
+          "kind": "task_snapshot",
+          "task_id": "task-001",
+          "state": "QUEUED",
+          "generation": 1
+        },
+        "attempt": null,
+        "pending_interaction": null,
+        "terminal_result": null,
+        "cursor": { "oldest_available_seq": 0, "last_committed_seq": 0 },
+        "dashboard": {
+          "base_url": "http://127.0.0.1:43127",
+          "bootstrap_url": "http://example.test/bootstrap?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "notice": "Bootstrap URL is single-use and must not be logged or persisted."
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "duplicate-top-level-key",
+    "source": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"mesh.health\",\"params\":{},\"method\":\"mesh.list_agents\"}"
+  },
+  {
+    "name": "duplicate-nested-key",
+    "source": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"mesh.wait_task\",\"params\":{\"task_id\":\"task-1\",\"after_seq\":0,\"after_seq\":1,\"limit\":1,\"wait_ms\":0}}"
+  },
+  {
+    "name": "lone-surrogate",
+    "source": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"mesh.health\",\"params\":{\"bad\":\"\\ud800\"}}"
+  }
+]

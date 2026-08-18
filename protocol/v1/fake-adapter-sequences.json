@@ -1,0 +1,51 @@
+[
+  {
+    "name": "valid",
+    "events": [
+      { "type": "lifecycle", "state": "RUNNING" },
+      { "type": "text", "text": "done" },
+      { "type": "terminal", "state": "SUCCEEDED" }
+    ]
+  },
+  { "name": "malformed", "events": [{ "type": "raw", "line": "{not-json" }] },
+  {
+    "name": "truncated",
+    "events": [{ "type": "raw", "line": "{\"type\":\"terminal\"" }]
+  },
+  { "name": "oversized", "events": [{ "type": "text", "bytes": 1048577 }] },
+  {
+    "name": "approval",
+    "events": [
+      { "type": "approval", "operation": "write_file" },
+      { "type": "terminal", "state": "SUCCEEDED" }
+    ]
+  },
+  {
+    "name": "cancellation",
+    "events": [
+      { "type": "lifecycle", "state": "RUNNING" },
+      { "type": "cancelled" }
+    ]
+  },
+  {
+    "name": "delayed",
+    "events": [
+      { "type": "delay", "milliseconds": 25 },
+      { "type": "terminal", "state": "SUCCEEDED" }
+    ]
+  },
+  {
+    "name": "duplicate",
+    "events": [
+      { "type": "terminal", "state": "SUCCEEDED" },
+      { "type": "terminal", "state": "SUCCEEDED" }
+    ]
+  },
+  {
+    "name": "crash",
+    "events": [
+      { "type": "lifecycle", "state": "RUNNING" },
+      { "type": "crash", "code": 137 }
+    ]
+  }
+]

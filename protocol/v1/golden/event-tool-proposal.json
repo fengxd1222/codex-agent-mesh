@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-003",
+  "task_id": "task-001",
+  "seq": 3,
+  "event_type": "tool_proposal",
+  "payload": {
+    "operation_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "interaction_id": "interaction-001"
+  }
+}

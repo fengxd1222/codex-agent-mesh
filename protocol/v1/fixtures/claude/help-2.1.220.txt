@@ -1,0 +1,10 @@
+Usage: claude [options] [statement]
+  -p, --print
+  --output-format <text|json|stream-json>
+  --verbose
+  --include-partial-messages
+  --input-format <text|stream-json>
+  --effort <low|medium|high>
+  --resume <session>
+  --permission-mode <mode>
+  --permission-prompt-tool <name>

@@ -1,0 +1,11 @@
+{
+  "jsonrpc": "2.0",
+  "id": "handshake-2",
+  "method": "mesh.handshake",
+  "params": {
+    "phase": "auth",
+    "client_nonce": "1111111111111111111111111111111111111111111111111111111111111111",
+    "server_nonce": "2222222222222222222222222222222222222222222222222222222222222222",
+    "client_proof": "480ab4affd0734c367f0949c62aabcc96c432a347485606bfa64dc872af1fdcd"
+  }
+}

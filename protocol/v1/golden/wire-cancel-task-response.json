@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "result": {
+    "kind": "cancel_task_result",
+    "task": {
+      "version": 1,
+      "kind": "task_snapshot",
+      "task_id": "task-001",
+      "state": "CANCEL_REQUESTED",
+      "generation": 1
+    }
+  }
+}

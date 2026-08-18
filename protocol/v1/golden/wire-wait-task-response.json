@@ -1,0 +1,24 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "kind": "wait_task_result",
+    "task_id": "task-001",
+    "requested_after_seq": 0,
+    "events": [
+      {
+        "version": 1,
+        "kind": "event",
+        "event_id": "event-001",
+        "task_id": "task-001",
+        "seq": 1,
+        "event_type": "state_changed",
+        "payload": { "state": "RUNNING" }
+      }
+    ],
+    "next_seq": 1,
+    "oldest_available_seq": 1,
+    "last_committed_seq": 1,
+    "terminal_result": null
+  }
+}

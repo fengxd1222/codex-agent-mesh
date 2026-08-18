@@ -1,0 +1,59 @@
+[package]
+name = "mesh-win32"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# This is the sole audited Win32 FFI boundary. Domain crates inherit the
+# workspace-wide unsafe prohibition; this crate instead confines unsafe calls
+# to its Windows implementation and denies implicit unsafe operations.
+[lints.rust]
+unsafe_code = "allow"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+[dependencies]
+data-encoding = "2.9.0"
+getrandom = "0.3.4"
+hmac = "0.12.1"
+sha2 = "0.10.9"
+zeroize = "=1.9.0"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61.3", features = [
+  "Win32_Foundation",
+  "Win32_Security",
+  "Win32_System_Com",
+  "Win32_System_Ole",
+  "Win32_System_TaskScheduler",
+  "Win32_System_Variant",
+] }
+windows-sys = { version = "0.61.2", features = [
+  "Win32_Foundation",
+  "Win32_Globalization",
+  "Win32_Security",
+  "Win32_Security_Authorization",
+  "Win32_Security_Cryptography",
+  "Win32_Security_Cryptography_Catalog",
+  "Win32_Security_Cryptography_Sip",
+  "Win32_Security_WinTrust",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_Console",
+  "Win32_System_IO",
+  "Win32_System_JobObjects",
+  "Win32_System_Memory",
+  "Win32_System_Pipes",
+  "Win32_System_SystemServices",
+  "Win32_System_Threading",
+  "Win32_System_WindowsProgramming",
+  "Win32_UI_Shell",
+] }
+
+[dev-dependencies]
+serde_json = "1.0.149"
+tempfile = "3.24.0"

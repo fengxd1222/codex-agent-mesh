@@ -1,0 +1,24 @@
+{
+  "name": "codex-agent-mesh",
+  "version": "0.1.0",
+  "description": "Durable local delegation from Codex to supported external coding agents.",
+  "author": {
+    "name": "fengxd1222"
+  },
+  "repository": "https://github.com/fengxd1222/codex-agent-mesh",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Agent Mesh",
+    "shortDescription": "Delegate bounded local work with durable observation.",
+    "longDescription": "A Windows-first local control plane for bounded delegation, durable observation, and explicit result review.",
+    "developerName": "fengxd1222",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": [
+      "Install and configure Codex Agent Mesh on this machine.",
+      "Check whether my local Codex Agent Mesh daemon is available.",
+      "Change implementation to Luna Max in mesh settings."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

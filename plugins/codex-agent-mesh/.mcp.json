@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "codex-agent-mesh": {
+      "command": "node",
+      "args": ["runtime/mcp-bridge/index.js"],
+      "cwd": "."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-dispatch-phase-001",
+  "task_id": "task-001",
+  "attempt_id": "attempt-001",
+  "seq": 11,
+  "event_type": "dispatch_phase",
+  "payload": {
+    "phase": "PROCESS_STARTED"
+  }
+}

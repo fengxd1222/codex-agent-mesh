@@ -1,0 +1,16 @@
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "method": "mesh.review_task",
+  "params": {
+    "version": 1,
+    "kind": "command",
+    "action": "review_ack",
+    "command_key": "cmd-ack-001",
+    "task_id": "task-001",
+    "result_id": "result-001",
+    "result_version": 1,
+    "ack_token": "ack-token-001",
+    "verdict": "ACCEPTED"
+  }
+}

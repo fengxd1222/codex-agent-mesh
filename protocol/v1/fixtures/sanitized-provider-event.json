@@ -1,0 +1,6 @@
+{
+  "kind": "adapter_event",
+  "event": "terminal",
+  "state": "SUCCEEDED",
+  "message": "fixture only"
+}

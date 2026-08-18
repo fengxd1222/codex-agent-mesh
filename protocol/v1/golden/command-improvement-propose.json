@@ -1,0 +1,58 @@
+{
+  "action": "improvement_propose",
+  "case_id": "case-001",
+  "command_key": "cmd-improve-001",
+  "fixtures": [
+    {
+      "fixture_id": "fixture-01",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-02",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-03",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-04",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-05",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-06",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-07",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-08",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    {
+      "fixture_id": "fixture-09",
+      "hard_invariant_failures": 0,
+      "passed": true
+    },
+    { "fixture_id": "fixture-10", "hard_invariant_failures": 0, "passed": true }
+  ],
+  "hypothesis": "Use the bounded high quality setting for this cohort.",
+  "kind": "command",
+  "knob": "quality",
+  "value": "high",
+  "version": 1
+}

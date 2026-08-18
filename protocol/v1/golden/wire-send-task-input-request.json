@@ -1,0 +1,19 @@
+{
+  "jsonrpc": "2.0",
+  "id": 8,
+  "method": "mesh.send_task_input",
+  "params": {
+    "version": 1,
+    "kind": "command",
+    "action": "interaction_response",
+    "command_key": "cmd-input-001",
+    "task_id": "task-001",
+    "interaction_id": "interaction-001",
+    "generation": 0,
+    "operation_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "policy_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+    "config_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+    "nonce": "nonce-001",
+    "response": { "kind": "approve" }
+  }
+}

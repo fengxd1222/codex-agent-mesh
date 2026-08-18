@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-009",
+  "task_id": "task-001",
+  "seq": 9,
+  "event_type": "terminal",
+  "payload": { "state": "SUCCEEDED", "result_id": "result-001" }
+}

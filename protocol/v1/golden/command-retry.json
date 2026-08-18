@@ -1,0 +1,8 @@
+{
+  "action": "retry",
+  "command_key": "cmd-retry-001",
+  "expected_generation": 1,
+  "kind": "command",
+  "task_id": "task-001",
+  "version": 1
+}

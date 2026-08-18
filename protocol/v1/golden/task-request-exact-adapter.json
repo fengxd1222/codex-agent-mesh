@@ -1,0 +1,22 @@
+{
+  "adapter_instance_id": "claude-local",
+  "command_key": "cmd-002",
+  "context_refs": [],
+  "effect_profile": "ISOLATED_WORKTREE",
+  "effort": "high",
+  "kind": "task_request",
+  "objective": "Implement the bounded change.",
+  "permission_policy": "isolated_write_prompt",
+  "priority": 1,
+  "quality": "high",
+  "review_chain_override": "disabled",
+  "retry_of_task_id": "task-previous",
+  "role": "implementation",
+  "timeout_seconds": 900,
+  "version": 1,
+  "workspace": {
+    "base_commit": "0123456789012345678901234567890123456789",
+    "mode": "isolated_worktree",
+    "path": "D:/repo"
+  }
+}

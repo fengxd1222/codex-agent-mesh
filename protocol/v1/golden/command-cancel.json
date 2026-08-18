@@ -1,0 +1,7 @@
+{
+  "action": "cancel",
+  "command_key": "cmd-cancel-001",
+  "kind": "command",
+  "task_id": "task-001",
+  "version": 1
+}

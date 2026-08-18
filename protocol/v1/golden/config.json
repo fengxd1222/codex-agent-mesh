@@ -1,0 +1,32 @@
+{
+  "config_version": 1,
+  "settings": {
+    "enabled_adapters": { "claude": false, "grok": false, "kimi": false },
+    "executable_paths": { "claude": null, "grok": null, "kimi": null },
+    "transport_priority": {
+      "claude": ["native_json"],
+      "grok": ["acp"],
+      "kimi": ["acp"]
+    },
+    "role_bindings": {
+      "implementation": "claude",
+      "research": "grok",
+      "review": "kimi"
+    },
+    "concurrency": { "global": 3, "per_adapter": 1 },
+    "quality": { "default": "standard", "allowed": ["standard"] },
+    "effort": { "default": "medium", "allowed": ["medium"] },
+    "review_chain": { "enabled": false, "reviewer": "kimi" },
+    "retention": {
+      "acknowledged_result_days": 90,
+      "acknowledged_blob_terminal_days": 14,
+      "acknowledged_blob_post_ack_days": 7,
+      "successful_worktree_post_ack_days": 7,
+      "non_success_worktree_terminal_days": 30,
+      "metrics_days": 90
+    },
+    "improvement_enabled": false
+  },
+  "kind": "config",
+  "version": 1
+}

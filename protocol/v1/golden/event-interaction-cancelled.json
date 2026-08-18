@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-interaction-cancelled-001",
+  "task_id": "task-001",
+  "seq": 17,
+  "event_type": "interaction_decided",
+  "payload": {
+    "interaction_id": "interaction-001",
+    "status": "CANCELLED"
+  }
+}

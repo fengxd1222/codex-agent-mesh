@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "retry_classes": [
+    "SAFE_PRE_DISPATCH",
+    "SAFE_PROVEN_NO_EFFECT",
+    "DETERMINISTIC_FAILURE",
+    "AMBIGUOUS_AFTER_DISPATCH"
+  ],
+  "effect_classes": ["NO_EFFECT", "POSSIBLE_EFFECT", "UNKNOWN_EFFECT"],
+  "error_codes": [
+    "VERSION_UNSUPPORTED",
+    "VALIDATION_FAILED",
+    "IDEMPOTENCY_CONFLICT",
+    "ADAPTER_UNAVAILABLE",
+    "PROTOCOL_MALFORMED",
+    "OUTPUT_LIMIT_EXCEEDED",
+    "CANCELLED",
+    "APPROVAL_EXPIRED",
+    "STORAGE_UNAVAILABLE",
+    "AMBIGUOUS_AFTER_DISPATCH",
+    "IPC_AUTHENTICATION_FAILED",
+    "IPC_FRAME_INVALID",
+    "IPC_FRAME_TOO_LARGE",
+    "IPC_IO_TIMEOUT",
+    "DAEMON_START_TIMEOUT",
+    "SINGLETON_CONFLICT",
+    "SETUP_ABSENT",
+    "SETUP_DISABLED",
+    "SETUP_REMOVING",
+    "SETUP_DRIFTED",
+    "SETUP_ACCESS_DENIED",
+    "CURSOR_EXPIRED",
+    "RESPONSE_UNKNOWN"
+  ],
+  "classification_inputs": [
+    "error_code",
+    "adapter_capability",
+    "effect_profile",
+    "effect_proof",
+    "lifecycle_point"
+  ],
+  "rule": "Error codes are symptoms, not retry defaults. Deterministic input/setup errors stay DETERMINISTIC_FAILURE; SETUP_REMOVING is a transient install-record fence proven SAFE_PRE_DISPATCH with NO_EFFECT. Otherwise only BEFORE_PROCESS_CREATION is SAFE_PRE_DISPATCH; only a dead process plus enforced no-effect proof is SAFE_PROVEN_NO_EFFECT; ambiguous post-dispatch evidence is NEEDS_ATTENTION."
+}

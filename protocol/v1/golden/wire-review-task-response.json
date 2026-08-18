@@ -1,0 +1,19 @@
+{
+  "jsonrpc": "2.0",
+  "id": 10,
+  "result": {
+    "kind": "review_task_result",
+    "result": {
+      "version": 1,
+      "kind": "result",
+      "result_id": "result-001",
+      "task_id": "task-001",
+      "state": "SUCCEEDED",
+      "result_version": 1,
+      "ack_token": "ack-token-001",
+      "ack_status": "ACKNOWLEDGED"
+    },
+    "verdict": "ACCEPTED",
+    "reviewed_at_ms": 2000
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "kind": "permission_roundtrip",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "session/request_permission",
+    "params": {
+      "sessionId": "session-fixture-001",
+      "options": [
+        { "optionId": "proceed", "name": "Proceed", "kind": "enable_once" },
+        { "optionId": "reject", "name": "Reject", "kind": "reject_once" }
+      ],
+      "kind": "execute_once"
+    }
+  },
+  "approve": {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "result": { "outcome": { "outcome": "selected", "optionId": "proceed" } }
+  },
+  "deny": {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "result": { "outcome": { "outcome": "selected", "optionId": "reject" } }
+  },
+  "cancel": {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "result": { "outcome": { "outcome": "cancelled" } }
+  }
+}

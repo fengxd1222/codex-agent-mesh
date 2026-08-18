@@ -1,0 +1,10 @@
+{
+  "ack_status": "PENDING",
+  "ack_token": "ack-token-001",
+  "kind": "result",
+  "result_id": "result-001",
+  "result_version": 1,
+  "state": "SUCCEEDED",
+  "task_id": "task-001",
+  "version": 1
+}

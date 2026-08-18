@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-recovery-required-001",
+  "task_id": "task-001",
+  "attempt_id": "attempt-001",
+  "seq": 13,
+  "event_type": "recovery_required",
+  "payload": {
+    "action": "resume_session"
+  }
+}

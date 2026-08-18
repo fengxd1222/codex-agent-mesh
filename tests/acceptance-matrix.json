@@ -1,0 +1,138 @@
+[
+  {
+    "id": "AC-00",
+    "test": "scripts/test-windows-integration.ps1",
+    "command": "pwsh -NoProfile -File scripts/test-windows-integration.ps1",
+    "class": "live",
+    "platform": "windows",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-01",
+    "test": "plugin validator",
+    "command": "python <CODEX_HOME>/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/codex-agent-mesh",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-02",
+    "test": "adapter fixtures",
+    "command": "pwsh -NoProfile -File scripts/test-adapter-fixtures.ps1",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "adapter_*"
+  },
+  {
+    "id": "AC-03",
+    "test": "live adapters",
+    "command": "pwsh -NoProfile -File scripts/test-live-adapters.ps1",
+    "class": "live",
+    "platform": "windows",
+    "feature_flag": "adapter_*"
+  },
+  {
+    "id": "AC-04",
+    "test": "daemon singleton",
+    "command": "pwsh -NoProfile -File scripts/test-daemon-singleton.ps1 -Clients 100",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-05",
+    "test": "recovery",
+    "command": "cargo test -p mesh-daemon recovery",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-06",
+    "test": "state machine",
+    "command": "cargo test -p mesh-daemon state_machine",
+    "class": "fake",
+    "platform": "any",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-07",
+    "test": "bridge reconnect",
+    "command": "pwsh -NoProfile -File scripts/test-bridge-reconnect.ps1",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-08",
+    "test": "storage",
+    "command": "cargo test -p mesh-daemon storage",
+    "class": "fake",
+    "platform": "any",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-09",
+    "test": "approvals",
+    "command": "cargo test -p mesh-daemon approvals",
+    "class": "fake",
+    "platform": "any",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-10",
+    "test": "worktree",
+    "command": "cargo test -p mesh-daemon worktree",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-11",
+    "test": "process tree",
+    "command": "pwsh -NoProfile -File scripts/test-process-tree.ps1",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "core"
+  },
+  {
+    "id": "AC-12",
+    "test": "dashboard security",
+    "command": "pwsh -NoProfile -File scripts/test-dashboard-security.ps1",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "dashboard"
+  },
+  {
+    "id": "AC-13",
+    "test": "dashboard configuration",
+    "command": "npm test --workspace packages/dashboard",
+    "class": "fake",
+    "platform": "any",
+    "feature_flag": "dashboard_settings"
+  },
+  {
+    "id": "AC-14",
+    "test": "scheduler",
+    "command": "cargo test -p mesh-daemon scheduler",
+    "class": "fake",
+    "platform": "any",
+    "feature_flag": "review_chain"
+  },
+  {
+    "id": "AC-15",
+    "test": "improvement",
+    "command": "cargo test -p mesh-daemon improvement",
+    "class": "fake",
+    "platform": "any",
+    "feature_flag": "improvement"
+  },
+  {
+    "id": "AC-16",
+    "test": "full gate",
+    "command": "npm run protocol:check && cargo test --workspace",
+    "class": "fake",
+    "platform": "windows",
+    "feature_flag": "core"
+  }
+]

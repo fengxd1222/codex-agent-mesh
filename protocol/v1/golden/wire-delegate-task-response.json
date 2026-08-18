@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "result": {
+    "kind": "delegate_task_result",
+    "task": {
+      "version": 1,
+      "kind": "task_snapshot",
+      "task_id": "task-001",
+      "state": "QUEUED",
+      "generation": 1
+    },
+    "request_digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

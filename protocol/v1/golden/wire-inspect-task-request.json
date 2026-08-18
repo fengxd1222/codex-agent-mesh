@@ -1,0 +1,6 @@
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "method": "mesh.inspect_task",
+  "params": { "task_id": "task-001" }
+}

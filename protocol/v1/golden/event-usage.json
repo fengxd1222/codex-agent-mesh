@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-006",
+  "task_id": "task-001",
+  "seq": 6,
+  "event_type": "usage",
+  "payload": { "input_tokens": 10, "output_tokens": 20 }
+}

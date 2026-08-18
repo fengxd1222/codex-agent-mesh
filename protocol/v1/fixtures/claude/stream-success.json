@@ -1,0 +1,49 @@
+[
+  {
+    "cwd": "workspace",
+    "session_id": "session-fixture-001",
+    "subtype": "init",
+    "tools": ["Read"],
+    "type": "system"
+  },
+  {
+    "message": {
+      "content": [{ "text": "deterministic output", "type": "text" }],
+      "role": "assistant"
+    },
+    "type": "assistant"
+  },
+  {
+    "event": { "delta": { "text": " more", "type": "text_delta" } },
+    "type": "stream_event"
+  },
+  {
+    "message": {
+      "content": [
+        {
+          "id": "toolu-fixture-001",
+          "input": { "path": "README.md" },
+          "name": "Read",
+          "type": "tool_use"
+        }
+      ],
+      "role": "assistant"
+    },
+    "type": "assistant"
+  },
+  {
+    "request": {
+      "input": { "path": "README.md" },
+      "subtype": "can_use_tool",
+      "tool_name": "Read",
+      "tool_use_id": "toolu-fixture-001"
+    },
+    "request_id": "req-fixture-001",
+    "type": "control_request"
+  },
+  {
+    "session_id": "session-fixture-001",
+    "subtype": "success",
+    "type": "result"
+  }
+]

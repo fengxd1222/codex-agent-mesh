@@ -1,0 +1,83 @@
+[
+  {
+    "name": "task-request",
+    "value": {
+      "command_key": "cmd-001",
+      "context_refs": [{ "kind": "file", "locator": "README.md" }],
+      "effect_profile": "READ_ONLY",
+      "effort": "medium",
+      "kind": "task_request",
+      "objective": "Summarize the local protocol.",
+      "permission_policy": "deny_writes",
+      "priority": 0,
+      "quality": "standard",
+      "review_chain_override": "default",
+      "role": "research",
+      "timeout_seconds": 300,
+      "version": 1,
+      "workspace": {
+        "base_commit": "0123456789012345678901234567890123456789",
+        "mode": "isolated_worktree",
+        "path": "D:/repo"
+      }
+    },
+    "canonical": "{\"command_key\":\"cmd-001\",\"context_refs\":[{\"kind\":\"file\",\"locator\":\"README.md\"}],\"effect_profile\":\"READ_ONLY\",\"effort\":\"medium\",\"kind\":\"task_request\",\"objective\":\"Summarize the local protocol.\",\"permission_policy\":\"deny_writes\",\"priority\":0,\"quality\":\"standard\",\"review_chain_override\":\"default\",\"role\":\"research\",\"timeout_seconds\":300,\"version\":1,\"workspace\":{\"base_commit\":\"0123456789012345678901234567890123456789\",\"mode\":\"isolated_worktree\",\"path\":\"D:/repo\"}}",
+    "digest": "1ff49dcefdf73c3b5cb093889b703adef9d114087ee655298598d9cf97cb2429"
+  },
+  {
+    "name": "config-v1",
+    "value": {
+      "config_version": 1,
+      "kind": "config",
+      "settings": {
+        "concurrency": { "global": 3, "per_adapter": 1 },
+        "effort": { "allowed": ["medium"], "default": "medium" },
+        "enabled_adapters": { "claude": false, "grok": false, "kimi": false },
+        "executable_paths": { "claude": null, "grok": null, "kimi": null },
+        "improvement_enabled": false,
+        "quality": { "allowed": ["standard"], "default": "standard" },
+        "retention": {
+          "acknowledged_blob_post_ack_days": 7,
+          "acknowledged_blob_terminal_days": 14,
+          "acknowledged_result_days": 90,
+          "metrics_days": 90,
+          "non_success_worktree_terminal_days": 30,
+          "successful_worktree_post_ack_days": 7
+        },
+        "review_chain": { "enabled": false, "reviewer": "kimi" },
+        "role_bindings": {
+          "implementation": "claude",
+          "research": "grok",
+          "review": "kimi"
+        },
+        "transport_priority": {
+          "claude": ["native_json"],
+          "grok": ["acp"],
+          "kimi": ["acp"]
+        }
+      },
+      "version": 1
+    },
+    "canonical": "{\"config_version\":1,\"kind\":\"config\",\"settings\":{\"concurrency\":{\"global\":3,\"per_adapter\":1},\"effort\":{\"allowed\":[\"medium\"],\"default\":\"medium\"},\"enabled_adapters\":{\"claude\":false,\"grok\":false,\"kimi\":false},\"executable_paths\":{\"claude\":null,\"grok\":null,\"kimi\":null},\"improvement_enabled\":false,\"quality\":{\"allowed\":[\"standard\"],\"default\":\"standard\"},\"retention\":{\"acknowledged_blob_post_ack_days\":7,\"acknowledged_blob_terminal_days\":14,\"acknowledged_result_days\":90,\"metrics_days\":90,\"non_success_worktree_terminal_days\":30,\"successful_worktree_post_ack_days\":7},\"review_chain\":{\"enabled\":false,\"reviewer\":\"kimi\"},\"role_bindings\":{\"implementation\":\"claude\",\"research\":\"grok\",\"review\":\"kimi\"},\"transport_priority\":{\"claude\":[\"native_json\"],\"grok\":[\"acp\"],\"kimi\":[\"acp\"]}},\"version\":1}",
+    "digest": "22a01f7ccf852d7b2032c4c2c0f25df516d9f07e81d0107a3b2036055cfff16b"
+  },
+  {
+    "name": "operation",
+    "value": {
+      "arguments": { "path": "src/index.ts", "write": false },
+      "operation": "read_file",
+      "version": 1
+    },
+    "canonical": "{\"arguments\":{\"path\":\"src/index.ts\",\"write\":false},\"operation\":\"read_file\",\"version\":1}",
+    "digest": "ffcda3d1dfa7eb011c88fbbfc3ca05f59016dc677d939ac7056fbacc829614ab"
+  },
+  {
+    "name": "unicode-nested-safe-integer",
+    "value": {
+      "😀": ["line\nbreak", 9007199254740991],
+      "é": { "a": true, "\b": null }
+    },
+    "canonical": "{\"é\":{\"\\b\":null,\"a\":true},\"😀\":[\"line\\nbreak\",9007199254740991]}",
+    "digest": "fb7fcaa552a758651fc87f116bee13ce6e609f684da0059f7f4dd2c023b49cab"
+  }
+]

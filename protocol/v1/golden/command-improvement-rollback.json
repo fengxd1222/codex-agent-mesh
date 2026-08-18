@@ -1,0 +1,8 @@
+{
+  "action": "improvement_rollback",
+  "case_id": "case-001",
+  "command_key": "cmd-rollback-001",
+  "kind": "command",
+  "target_config_version": 1,
+  "version": 1
+}

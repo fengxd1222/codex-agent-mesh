@@ -1,0 +1,15 @@
+{
+  "adapter": "grok",
+  "adapter_instance_id": "grok:local:default:5a4c8f281e1dfc803d152972dd1779c205bebc67371a41ce103f942c5d6c3c02",
+  "capabilities": ["streaming", "approvals"],
+  "degradation_reason": "local live contract not recorded",
+  "executable_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "executable_path": "grok.exe",
+  "executable_version": "1.0.4",
+  "kind": "adapter_capabilities",
+  "permission_health": "SUPPORTED",
+  "status": "DEGRADED",
+  "supported_interactions": ["approval"],
+  "transport": "acp",
+  "version": 1
+}

@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "method": "mesh.cancel_task",
+  "params": {
+    "version": 1,
+    "kind": "command",
+    "action": "cancel",
+    "command_key": "cmd-cancel-001",
+    "task_id": "task-001"
+  }
+}

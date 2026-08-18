@@ -1,0 +1,21 @@
+{
+  "jsonrpc": "2.0",
+  "id": 12,
+  "error": {
+    "code": -32002,
+    "message": "The retained installation is being removed.",
+    "data": {
+      "error": {
+        "version": 1,
+        "kind": "error",
+        "code": "SETUP_REMOVING",
+        "retry_class": "SAFE_PRE_DISPATCH",
+        "effect_class": "NO_EFFECT",
+        "lifecycle": "BEFORE_PROCESS_CREATION",
+        "evidence": "install_record_removing_fence",
+        "message": "The retained installation is being removed."
+      },
+      "diagnostic_ref": "diagnostic-removing-001"
+    }
+  }
+}

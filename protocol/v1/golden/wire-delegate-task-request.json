@@ -1,0 +1,25 @@
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "mesh.delegate_task",
+  "params": {
+    "version": 1,
+    "kind": "task_request",
+    "command_key": "cmd-001",
+    "role": "research",
+    "objective": "Summarize the local protocol.",
+    "context_refs": [{ "kind": "file", "locator": "README.md" }],
+    "quality": "standard",
+    "effort": "medium",
+    "timeout_seconds": 300,
+    "priority": 0,
+    "workspace": {
+      "path": "D:/repo",
+      "base_commit": "0123456789012345678901234567890123456789",
+      "mode": "isolated_worktree"
+    },
+    "effect_profile": "READ_ONLY",
+    "permission_policy": "deny_writes",
+    "review_chain_override": "default"
+  }
+}

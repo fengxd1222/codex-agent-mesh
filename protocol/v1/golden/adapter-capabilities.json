@@ -1,0 +1,15 @@
+{
+  "adapter": "fake",
+  "adapter_instance_id": "fake-local",
+  "degradation_reason": "",
+  "executable_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "executable_path": "fake-agent.exe",
+  "executable_version": "0.1.0",
+  "permission_health": "SUPPORTED",
+  "supported_interactions": ["approval"],
+  "transport": "fake",
+  "capabilities": ["streaming", "cancellation", "approvals"],
+  "kind": "adapter_capabilities",
+  "status": "ENABLED",
+  "version": 1
+}

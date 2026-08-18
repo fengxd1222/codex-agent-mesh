@@ -1,0 +1,2166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codex-agent-mesh.local/protocol/v1/schema.json",
+  "title": "Codex Agent Mesh protocol v1",
+  "oneOf": [
+    { "$ref": "#/$defs/domainRecord" },
+    { "$ref": "#/$defs/wireMessage" }
+  ],
+  "x-mcp-tools": [
+    {
+      "name": "list_agents",
+      "description": "List configured local adapters and their admitted capabilities.",
+      "inputRef": "#/$defs/listAgentsParams",
+      "outputRef": "#/$defs/mcpListAgentsOutput",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "delegate_task",
+      "description": "Create or replay one durable delegation using the supplied command key.",
+      "inputRef": "#/$defs/taskRequest",
+      "outputRef": "#/$defs/mcpDelegateTaskOutput",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "inspect_task",
+      "description": "Read the durable task snapshot, replay cursor bounds, and optional one-time local dashboard bootstrap.",
+      "inputRef": "#/$defs/inspectTaskParams",
+      "outputRef": "#/$defs/mcpInspectTaskOutput",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "wait_task",
+      "description": "Wait for persisted task events strictly after an explicit replay cursor. Use until=attention to hold until a terminal result or pending approval/input, instead of returning on every text page.",
+      "inputRef": "#/$defs/waitTaskParams",
+      "outputRef": "#/$defs/mcpWaitTaskOutput",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "send_task_input",
+      "description": "Answer one current durable interaction using its exact generation, nonce, and digest.",
+      "inputRef": "#/$defs/interactionResponseCommand",
+      "outputRef": "#/$defs/mcpSendTaskInputOutput",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "cancel_task",
+      "description": "Persist cancellation intent for one task using a durable command key.",
+      "inputRef": "#/$defs/cancelCommand",
+      "outputRef": "#/$defs/mcpCancelTaskOutput",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "review_task",
+      "description": "Record a verdict and acknowledge the exact terminal result identity.",
+      "inputRef": "#/$defs/reviewAckCommand",
+      "outputRef": "#/$defs/mcpReviewTaskOutput",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "improvement_case",
+      "description": "Inspect a guarded improvement case or submit an allowlisted candidate/rollback command.",
+      "inputRef": "#/$defs/improvementCaseParams",
+      "outputRef": "#/$defs/mcpImprovementCaseOutput",
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "$defs": {
+    "domainRecord": {
+      "type": "object",
+      "oneOf": [
+        { "$ref": "#/$defs/taskRequest" },
+        { "$ref": "#/$defs/command" },
+        { "$ref": "#/$defs/taskSnapshot" },
+        { "$ref": "#/$defs/attemptSnapshot" },
+        { "$ref": "#/$defs/event" },
+        { "$ref": "#/$defs/interaction" },
+        { "$ref": "#/$defs/result" },
+        { "$ref": "#/$defs/error" },
+        { "$ref": "#/$defs/adapterCapabilities" },
+        { "$ref": "#/$defs/config" },
+        { "$ref": "#/$defs/improvementCase" }
+      ]
+    },
+    "version": { "type": "integer", "const": 1 },
+    "safeInteger": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "nonNegativeSafeInteger": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "positiveSafeInteger": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32767,
+      "pattern": "^[^\\u0000]+$"
+    },
+    "taskState": {
+      "enum": [
+        "QUEUED",
+        "PREPARING",
+        "WAITING_APPROVAL",
+        "RUNNING",
+        "FINALIZING",
+        "RETRY_WAIT",
+        "CANCEL_REQUESTED",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "NEEDS_ATTENTION"
+      ]
+    },
+    "attemptState": {
+      "enum": [
+        "CREATED",
+        "PREPARING",
+        "WAITING_APPROVAL",
+        "RUNNING",
+        "FINALIZING",
+        "RETRY_WAIT",
+        "CANCEL_REQUESTED",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "NEEDS_ATTENTION"
+      ]
+    },
+    "contextReference": {
+      "type": "object",
+      "required": ["kind", "locator"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "file",
+            "directory",
+            "url",
+            "text",
+            "artifact",
+            "task_result"
+          ]
+        },
+        "locator": { "type": "string", "minLength": 1, "maxLength": 32768 },
+        "digest": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "workspace": {
+      "type": "object",
+      "required": ["path", "base_commit", "mode"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "base_commit": {
+          "type": "string",
+          "pattern": "^(?:[a-f0-9]{40}|[a-f0-9]{64})$"
+        },
+        "mode": {
+          "enum": ["read_only", "isolated_worktree", "current_directory"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "taskRequest": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "command_key",
+        "role",
+        "objective",
+        "context_refs",
+        "quality",
+        "effort",
+        "timeout_seconds",
+        "priority",
+        "workspace",
+        "effect_profile",
+        "permission_policy"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "task_request" },
+        "command_key": { "$ref": "#/$defs/id" },
+        "role": {
+          "enum": ["implementation", "research", "review", "freelancer"]
+        },
+        "adapter_instance_id": { "$ref": "#/$defs/id" },
+        "retry_of_task_id": { "$ref": "#/$defs/id" },
+        "objective": { "type": "string", "minLength": 1, "maxLength": 32768 },
+        "context_refs": {
+          "type": "array",
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/contextReference" }
+        },
+        "quality": { "enum": ["low", "standard", "high"] },
+        "effort": { "enum": ["low", "medium", "high"] },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        },
+        "priority": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "workspace": { "$ref": "#/$defs/workspace" },
+        "effect_profile": {
+          "enum": [
+            "READ_ONLY",
+            "ISOLATED_WORKTREE",
+            "CURRENT_DIRECTORY",
+            "EXTERNAL_SIDE_EFFECTS"
+          ]
+        },
+        "permission_policy": { "$ref": "#/$defs/id" },
+        "review_chain_override": { "enum": ["default", "enabled", "disabled"] }
+      },
+      "additionalProperties": false
+    },
+    "interactionResponse": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind"],
+          "properties": { "kind": { "const": "approve" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": { "const": "deny" },
+            "reason": { "type": "string", "maxLength": 4096 }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "text"],
+          "properties": {
+            "kind": { "const": "text" },
+            "text": { "type": "string", "minLength": 1, "maxLength": 32768 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "cancelCommand": {
+      "type": "object",
+      "required": ["version", "kind", "action", "command_key", "task_id"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "command" },
+        "action": { "const": "cancel" },
+        "command_key": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" }
+      },
+      "additionalProperties": false
+    },
+    "interactionResponseCommand": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "action",
+        "command_key",
+        "task_id",
+        "interaction_id",
+        "generation",
+        "operation_digest",
+        "policy_digest",
+        "config_digest",
+        "nonce",
+        "response"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "command" },
+        "action": { "const": "interaction_response" },
+        "command_key": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "interaction_id": { "$ref": "#/$defs/id" },
+        "generation": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "operation_digest": { "$ref": "#/$defs/digest" },
+        "policy_digest": { "$ref": "#/$defs/digest" },
+        "config_digest": { "$ref": "#/$defs/digest" },
+        "nonce": { "$ref": "#/$defs/id" },
+        "response": { "$ref": "#/$defs/interactionResponse" }
+      },
+      "additionalProperties": false
+    },
+    "reviewAckCommand": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "action",
+        "command_key",
+        "task_id",
+        "result_id",
+        "result_version",
+        "ack_token",
+        "verdict"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "command" },
+        "action": { "const": "review_ack" },
+        "command_key": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "result_id": { "$ref": "#/$defs/id" },
+        "result_version": { "type": "integer", "const": 1 },
+        "ack_token": { "$ref": "#/$defs/id" },
+        "verdict": { "enum": ["ACCEPTED", "REJECTED"] },
+        "diagnosis": { "type": "string", "maxLength": 8192 }
+      },
+      "additionalProperties": false
+    },
+    "retryCommand": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "action",
+        "command_key",
+        "task_id",
+        "expected_generation"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "command" },
+        "action": { "const": "retry" },
+        "command_key": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "expected_generation": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "improvementProposeCommand": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "action",
+        "command_key",
+        "case_id",
+        "knob",
+        "value",
+        "hypothesis",
+        "fixtures"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "command" },
+        "action": { "const": "improvement_propose" },
+        "command_key": { "$ref": "#/$defs/id" },
+        "case_id": { "$ref": "#/$defs/id" },
+        "knob": {
+          "enum": [
+            "prompt_composition",
+            "context_selection",
+            "same_agent_transport_priority",
+            "quality",
+            "effort"
+          ]
+        },
+        "value": { "$ref": "#/$defs/id" },
+        "hypothesis": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "fixtures": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/improvementFixture" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "improvementRollbackCommand": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "action",
+        "command_key",
+        "case_id",
+        "target_config_version"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "command" },
+        "action": { "const": "improvement_rollback" },
+        "command_key": { "$ref": "#/$defs/id" },
+        "case_id": { "$ref": "#/$defs/id" },
+        "target_config_version": { "$ref": "#/$defs/positiveSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "improvementFixture": {
+      "type": "object",
+      "required": ["fixture_id", "passed", "hard_invariant_failures"],
+      "properties": {
+        "fixture_id": { "$ref": "#/$defs/id" },
+        "passed": { "type": "boolean" },
+        "hard_invariant_failures": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "improvementInspectParams": {
+      "type": "object",
+      "required": ["version", "kind", "action", "case_id"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "improvement_case" },
+        "action": { "const": "inspect" },
+        "case_id": { "$ref": "#/$defs/id" }
+      },
+      "additionalProperties": false
+    },
+    "improvementCaseParams": {
+      "oneOf": [
+        { "$ref": "#/$defs/improvementInspectParams" },
+        { "$ref": "#/$defs/improvementProposeCommand" },
+        { "$ref": "#/$defs/improvementRollbackCommand" }
+      ]
+    },
+    "command": {
+      "oneOf": [
+        { "$ref": "#/$defs/cancelCommand" },
+        { "$ref": "#/$defs/interactionResponseCommand" },
+        { "$ref": "#/$defs/reviewAckCommand" },
+        { "$ref": "#/$defs/retryCommand" },
+        { "$ref": "#/$defs/improvementProposeCommand" },
+        { "$ref": "#/$defs/improvementRollbackCommand" }
+      ]
+    },
+    "taskSnapshot": {
+      "type": "object",
+      "required": ["version", "kind", "task_id", "state", "generation"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "task_snapshot" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "state": { "$ref": "#/$defs/taskState" },
+        "generation": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "attempt_id": { "$ref": "#/$defs/id" },
+        "last_event_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "attemptSnapshot": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "attempt_id",
+        "task_id",
+        "generation",
+        "state",
+        "adapter_instance_id"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "attempt_snapshot" },
+        "attempt_id": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "generation": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "state": { "$ref": "#/$defs/attemptState" },
+        "adapter_instance_id": { "$ref": "#/$defs/id" }
+      },
+      "additionalProperties": false
+    },
+    "stateChangedPayload": {
+      "type": "object",
+      "required": ["state"],
+      "properties": { "state": { "$ref": "#/$defs/taskState" } },
+      "additionalProperties": false
+    },
+    "attemptStartedPayload": {
+      "type": "object",
+      "required": ["attempt_id", "ordinal"],
+      "properties": {
+        "attempt_id": { "$ref": "#/$defs/id" },
+        "ordinal": { "$ref": "#/$defs/positiveSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "dispatchPhasePayload": {
+      "type": "object",
+      "required": ["phase"],
+      "properties": {
+        "phase": {
+          "enum": [
+            "PRE_DISPATCH",
+            "SPAWN_PREPARED",
+            "PROCESS_STARTED",
+            "PROVIDER_OBSERVED"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "retryScheduledPayload": {
+      "type": "object",
+      "required": ["prior_generation", "retry_at_ms"],
+      "properties": {
+        "prior_generation": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "retry_at_ms": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "recoveryRequiredPayload": {
+      "type": "object",
+      "required": ["action"],
+      "properties": { "action": { "const": "resume_session" } },
+      "additionalProperties": false
+    },
+    "textDeltaPayload": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 262144 }
+      },
+      "additionalProperties": false
+    },
+    "toolProposalPayload": {
+      "type": "object",
+      "required": ["operation_digest", "interaction_id"],
+      "properties": {
+        "operation_digest": { "$ref": "#/$defs/digest" },
+        "interaction_id": { "$ref": "#/$defs/id" }
+      },
+      "additionalProperties": false
+    },
+    "interactionRequestedPayload": {
+      "type": "object",
+      "required": ["interaction_id"],
+      "properties": { "interaction_id": { "$ref": "#/$defs/id" } },
+      "additionalProperties": false
+    },
+    "interactionDecidedPayload": {
+      "oneOf": [
+        { "$ref": "#/$defs/interactionApprovedPayload" },
+        { "$ref": "#/$defs/interactionDeniedPayload" },
+        { "$ref": "#/$defs/interactionProvidedPayload" },
+        { "$ref": "#/$defs/interactionExpiredPayload" },
+        { "$ref": "#/$defs/interactionCancelledPayload" }
+      ]
+    },
+    "interactionApprovedPayload": {
+      "type": "object",
+      "required": ["interaction_id", "status", "response_kind"],
+      "properties": {
+        "interaction_id": { "$ref": "#/$defs/id" },
+        "status": { "const": "APPROVED" },
+        "response_kind": { "const": "approve" }
+      },
+      "additionalProperties": false
+    },
+    "interactionDeniedPayload": {
+      "type": "object",
+      "required": ["interaction_id", "status", "response_kind"],
+      "properties": {
+        "interaction_id": { "$ref": "#/$defs/id" },
+        "status": { "const": "DENIED" },
+        "response_kind": { "const": "deny" }
+      },
+      "additionalProperties": false
+    },
+    "interactionProvidedPayload": {
+      "type": "object",
+      "required": ["interaction_id", "status", "response_kind"],
+      "properties": {
+        "interaction_id": { "$ref": "#/$defs/id" },
+        "status": { "const": "PROVIDED" },
+        "response_kind": { "const": "text" }
+      },
+      "additionalProperties": false
+    },
+    "interactionExpiredPayload": {
+      "type": "object",
+      "required": ["interaction_id", "status"],
+      "properties": {
+        "interaction_id": { "$ref": "#/$defs/id" },
+        "status": { "const": "EXPIRED" }
+      },
+      "additionalProperties": false
+    },
+    "interactionCancelledPayload": {
+      "type": "object",
+      "required": ["interaction_id", "status"],
+      "properties": {
+        "interaction_id": { "$ref": "#/$defs/id" },
+        "status": { "const": "CANCELLED" }
+      },
+      "additionalProperties": false
+    },
+    "usagePayload": {
+      "type": "object",
+      "required": ["input_tokens", "output_tokens"],
+      "properties": {
+        "input_tokens": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "output_tokens": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "warningPayload": {
+      "type": "object",
+      "required": ["warning"],
+      "properties": {
+        "warning": { "type": "string", "minLength": 1, "maxLength": 4096 }
+      },
+      "additionalProperties": false
+    },
+    "protocolErrorPayload": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "$ref": "#/$defs/id" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 4096 }
+      },
+      "additionalProperties": false
+    },
+    "terminalPayload": {
+      "type": "object",
+      "required": ["state", "result_id"],
+      "properties": {
+        "state": {
+          "enum": ["SUCCEEDED", "FAILED", "CANCELLED", "NEEDS_ATTENTION"]
+        },
+        "result_id": { "$ref": "#/$defs/id" }
+      },
+      "additionalProperties": false
+    },
+    "eventBase": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "event_id",
+        "task_id",
+        "seq",
+        "event_type",
+        "payload"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "event" },
+        "event_id": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "attempt_id": { "$ref": "#/$defs/id" },
+        "seq": { "$ref": "#/$defs/positiveSafeInteger" },
+        "occurred_at_ms": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "severity": { "enum": ["INFO", "WARNING", "ERROR"] },
+        "event_type": {
+          "enum": [
+            "state_changed",
+            "attempt_started",
+            "dispatch_phase",
+            "retry_scheduled",
+            "recovery_required",
+            "text_delta",
+            "tool_proposal",
+            "interaction_requested",
+            "interaction_decided",
+            "usage",
+            "warning",
+            "protocol_error",
+            "terminal"
+          ]
+        },
+        "payload": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "event": {
+      "oneOf": [
+        { "$ref": "#/$defs/stateChangedEvent" },
+        { "$ref": "#/$defs/attemptStartedEvent" },
+        { "$ref": "#/$defs/dispatchPhaseEvent" },
+        { "$ref": "#/$defs/retryScheduledEvent" },
+        { "$ref": "#/$defs/recoveryRequiredEvent" },
+        { "$ref": "#/$defs/textDeltaEvent" },
+        { "$ref": "#/$defs/toolProposalEvent" },
+        { "$ref": "#/$defs/interactionRequestedEvent" },
+        { "$ref": "#/$defs/interactionDecidedEvent" },
+        { "$ref": "#/$defs/usageEvent" },
+        { "$ref": "#/$defs/warningEvent" },
+        { "$ref": "#/$defs/protocolErrorEvent" },
+        { "$ref": "#/$defs/terminalEvent" }
+      ]
+    },
+    "stateChangedEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "state_changed" },
+            "payload": { "$ref": "#/$defs/stateChangedPayload" }
+          }
+        }
+      ]
+    },
+    "attemptStartedEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "attempt_started" },
+            "payload": { "$ref": "#/$defs/attemptStartedPayload" }
+          }
+        }
+      ]
+    },
+    "dispatchPhaseEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "dispatch_phase" },
+            "payload": { "$ref": "#/$defs/dispatchPhasePayload" }
+          }
+        }
+      ]
+    },
+    "retryScheduledEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "retry_scheduled" },
+            "payload": { "$ref": "#/$defs/retryScheduledPayload" }
+          }
+        }
+      ]
+    },
+    "recoveryRequiredEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "recovery_required" },
+            "payload": { "$ref": "#/$defs/recoveryRequiredPayload" }
+          }
+        }
+      ]
+    },
+    "textDeltaEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "text_delta" },
+            "payload": { "$ref": "#/$defs/textDeltaPayload" }
+          }
+        }
+      ]
+    },
+    "toolProposalEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "tool_proposal" },
+            "payload": { "$ref": "#/$defs/toolProposalPayload" }
+          }
+        }
+      ]
+    },
+    "interactionRequestedEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "interaction_requested" },
+            "payload": { "$ref": "#/$defs/interactionRequestedPayload" }
+          }
+        }
+      ]
+    },
+    "interactionDecidedEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "interaction_decided" },
+            "payload": { "$ref": "#/$defs/interactionDecidedPayload" }
+          }
+        }
+      ]
+    },
+    "usageEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "usage" },
+            "payload": { "$ref": "#/$defs/usagePayload" }
+          }
+        }
+      ]
+    },
+    "warningEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "warning" },
+            "payload": { "$ref": "#/$defs/warningPayload" }
+          }
+        }
+      ]
+    },
+    "protocolErrorEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "protocol_error" },
+            "payload": { "$ref": "#/$defs/protocolErrorPayload" }
+          }
+        }
+      ]
+    },
+    "terminalEvent": {
+      "allOf": [
+        { "$ref": "#/$defs/eventBase" },
+        {
+          "type": "object",
+          "properties": {
+            "event_type": { "const": "terminal" },
+            "payload": { "$ref": "#/$defs/terminalPayload" }
+          }
+        }
+      ]
+    },
+    "interaction": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "interaction_id",
+        "task_id",
+        "attempt_id",
+        "adapter_instance_id",
+        "generation",
+        "capability_class",
+        "operation_digest",
+        "policy_digest",
+        "config_digest",
+        "config_version",
+        "policy_version",
+        "created_at_ms",
+        "expires_at_ms",
+        "nonce",
+        "status"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "interaction" },
+        "interaction_id": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "attempt_id": { "$ref": "#/$defs/id" },
+        "adapter_instance_id": { "$ref": "#/$defs/id" },
+        "generation": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "capability_class": { "enum": ["approval", "input"] },
+        "operation_digest": { "$ref": "#/$defs/digest" },
+        "policy_digest": { "$ref": "#/$defs/digest" },
+        "config_digest": { "$ref": "#/$defs/digest" },
+        "config_version": { "$ref": "#/$defs/positiveSafeInteger" },
+        "policy_version": { "$ref": "#/$defs/positiveSafeInteger" },
+        "created_at_ms": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "expires_at_ms": { "$ref": "#/$defs/positiveSafeInteger" },
+        "nonce": { "$ref": "#/$defs/id" },
+        "status": {
+          "enum": [
+            "PENDING",
+            "APPROVED",
+            "DENIED",
+            "PROVIDED",
+            "EXPIRED",
+            "CANCELLED"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "result_id",
+        "task_id",
+        "state",
+        "result_version",
+        "ack_token",
+        "ack_status"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "result" },
+        "result_id": { "$ref": "#/$defs/id" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "state": {
+          "enum": ["SUCCEEDED", "FAILED", "CANCELLED", "NEEDS_ATTENTION"]
+        },
+        "result_version": { "type": "integer", "const": 1 },
+        "ack_token": { "$ref": "#/$defs/id" },
+        "ack_status": { "enum": ["PENDING", "ACKNOWLEDGED"] }
+      },
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "code",
+        "retry_class",
+        "effect_class",
+        "lifecycle",
+        "evidence",
+        "message"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "error" },
+        "code": {
+          "enum": [
+            "VERSION_UNSUPPORTED",
+            "VALIDATION_FAILED",
+            "IDEMPOTENCY_CONFLICT",
+            "ADAPTER_UNAVAILABLE",
+            "PROTOCOL_MALFORMED",
+            "OUTPUT_LIMIT_EXCEEDED",
+            "CANCELLED",
+            "APPROVAL_EXPIRED",
+            "STORAGE_UNAVAILABLE",
+            "AMBIGUOUS_AFTER_DISPATCH",
+            "IPC_AUTHENTICATION_FAILED",
+            "IPC_FRAME_INVALID",
+            "IPC_FRAME_TOO_LARGE",
+            "IPC_IO_TIMEOUT",
+            "DAEMON_START_TIMEOUT",
+            "SINGLETON_CONFLICT",
+            "SETUP_ABSENT",
+            "SETUP_DISABLED",
+            "SETUP_REMOVING",
+            "SETUP_DRIFTED",
+            "SETUP_ACCESS_DENIED",
+            "CURSOR_EXPIRED",
+            "RESPONSE_UNKNOWN"
+          ]
+        },
+        "retry_class": {
+          "enum": [
+            "SAFE_PRE_DISPATCH",
+            "SAFE_PROVEN_NO_EFFECT",
+            "DETERMINISTIC_FAILURE",
+            "AMBIGUOUS_AFTER_DISPATCH"
+          ]
+        },
+        "effect_class": {
+          "enum": ["NO_EFFECT", "POSSIBLE_EFFECT", "UNKNOWN_EFFECT"]
+        },
+        "lifecycle": {
+          "enum": [
+            "BEFORE_PROCESS_CREATION",
+            "PROCESS_DEAD_NO_EFFECT_PROOF",
+            "AFTER_PROCESS_CREATION",
+            "UNKNOWN"
+          ]
+        },
+        "evidence": { "$ref": "#/$defs/id" },
+        "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+      },
+      "additionalProperties": false
+    },
+    "adapterCapabilities": {
+      "type": "object",
+      "required": [
+        "version",
+        "kind",
+        "adapter_instance_id",
+        "adapter",
+        "status",
+        "executable_path",
+        "executable_digest",
+        "executable_version",
+        "transport",
+        "capabilities",
+        "supported_interactions",
+        "permission_health",
+        "degradation_reason"
+      ],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "adapter_capabilities" },
+        "adapter_instance_id": { "$ref": "#/$defs/id" },
+        "adapter": { "enum": ["claude", "grok", "kimi", "luna", "pi", "fake"] },
+        "status": { "enum": ["ENABLED", "DEGRADED", "UNAVAILABLE"] },
+        "executable_path": { "$ref": "#/$defs/path" },
+        "executable_digest": { "$ref": "#/$defs/digest" },
+        "executable_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "transport": { "enum": ["fake", "native_json", "acp", "stream_json"] },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 16,
+          "items": {
+            "enum": [
+              "streaming",
+              "cancellation",
+              "approvals",
+              "input",
+              "session_resume",
+              "usage",
+              "artifacts"
+            ]
+          }
+        },
+        "supported_interactions": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 2,
+          "items": { "enum": ["approval", "input"] }
+        },
+        "permission_health": {
+          "enum": ["SUPPORTED", "DEGRADED", "UNSUPPORTED"]
+        },
+        "degradation_reason": { "type": "string", "maxLength": 512 }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": ["status", "degradation_reason"],
+              "properties": {
+                "status": { "const": "DEGRADED" },
+                "degradation_reason": { "type": "string", "minLength": 1 }
+              }
+            },
+            {
+              "type": "object",
+              "required": ["status"],
+              "properties": { "status": { "enum": ["ENABLED", "UNAVAILABLE"] } }
+            }
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "nullablePath": {
+      "oneOf": [{ "$ref": "#/$defs/path" }, { "type": "null" }]
+    },
+    "qualityPolicy": {
+      "type": "object",
+      "required": ["default", "allowed"],
+      "properties": {
+        "default": { "enum": ["low", "standard", "high"] },
+        "allowed": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["low", "standard", "high"] }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "default": { "const": "low" } },
+            "required": ["default"]
+          },
+          "then": {
+            "properties": {
+              "allowed": { "type": "array", "contains": { "const": "low" } }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "default": { "const": "standard" } },
+            "required": ["default"]
+          },
+          "then": {
+            "properties": {
+              "allowed": {
+                "type": "array",
+                "contains": { "const": "standard" }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "default": { "const": "high" } },
+            "required": ["default"]
+          },
+          "then": {
+            "properties": {
+              "allowed": { "type": "array", "contains": { "const": "high" } }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "effortPolicy": {
+      "type": "object",
+      "required": ["default", "allowed"],
+      "properties": {
+        "default": { "enum": ["low", "medium", "high"] },
+        "allowed": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["low", "medium", "high"] }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "default": { "const": "low" } },
+            "required": ["default"]
+          },
+          "then": {
+            "properties": {
+              "allowed": { "type": "array", "contains": { "const": "low" } }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "default": { "const": "medium" } },
+            "required": ["default"]
+          },
+          "then": {
+            "properties": {
+              "allowed": { "type": "array", "contains": { "const": "medium" } }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "default": { "const": "high" } },
+            "required": ["default"]
+          },
+          "then": {
+            "properties": {
+              "allowed": { "type": "array", "contains": { "const": "high" } }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "safeSettings": {
+      "type": "object",
+      "required": [
+        "enabled_adapters",
+        "executable_paths",
+        "transport_priority",
+        "role_bindings",
+        "concurrency",
+        "quality",
+        "effort",
+        "review_chain",
+        "retention",
+        "improvement_enabled"
+      ],
+      "properties": {
+        "native_models": {
+          "type": "object",
+          "properties": {
+            "luna": { "type": "string", "minLength": 1, "maxLength": 128 }
+          },
+          "additionalProperties": false
+        },
+        "enabled_adapters": {
+          "type": "object",
+          "required": ["claude", "grok", "kimi"],
+          "properties": {
+            "claude": { "type": "boolean" },
+            "grok": { "type": "boolean" },
+            "kimi": { "type": "boolean" },
+            "luna": { "type": "boolean" },
+            "pi": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "executable_paths": {
+          "type": "object",
+          "required": ["claude", "grok", "kimi"],
+          "properties": {
+            "claude": { "$ref": "#/$defs/nullablePath" },
+            "grok": { "$ref": "#/$defs/nullablePath" },
+            "kimi": { "$ref": "#/$defs/nullablePath" },
+            "luna": { "$ref": "#/$defs/nullablePath" },
+            "pi": { "$ref": "#/$defs/nullablePath" }
+          },
+          "additionalProperties": false
+        },
+        "transport_priority": {
+          "type": "object",
+          "required": ["claude", "grok", "kimi"],
+          "properties": {
+            "claude": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": { "enum": ["native_json", "acp"] }
+            },
+            "grok": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": { "enum": ["acp", "stream_json"] }
+            },
+            "kimi": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": { "enum": ["acp", "stream_json"] }
+            },
+            "luna": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": { "enum": ["acp", "stream_json", "native_json"] }
+            },
+            "pi": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "items": { "enum": ["acp", "stream_json", "native_json"] }
+            }
+          },
+          "additionalProperties": false
+        },
+        "role_bindings": {
+          "type": "object",
+          "required": ["implementation", "research", "review"],
+          "properties": {
+            "implementation": { "$ref": "#/$defs/bindingTarget" },
+            "research": { "$ref": "#/$defs/bindingTarget" },
+            "review": { "$ref": "#/$defs/bindingTarget" },
+            "freelancer": { "$ref": "#/$defs/bindingTarget" }
+          },
+          "additionalProperties": false
+        },
+        "concurrency": {
+          "type": "object",
+          "required": ["global", "per_adapter"],
+          "properties": {
+            "global": { "type": "integer", "minimum": 1, "maximum": 16 },
+            "per_adapter": { "type": "integer", "minimum": 1, "maximum": 4 }
+          },
+          "additionalProperties": false
+        },
+        "quality": { "$ref": "#/$defs/qualityPolicy" },
+        "effort": { "$ref": "#/$defs/effortPolicy" },
+        "review_chain": {
+          "type": "object",
+          "required": ["enabled", "reviewer"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "reviewer": { "$ref": "#/$defs/bindingTarget" }
+          },
+          "additionalProperties": false
+        },
+        "retention": {
+          "type": "object",
+          "required": [
+            "acknowledged_result_days",
+            "acknowledged_blob_terminal_days",
+            "acknowledged_blob_post_ack_days",
+            "successful_worktree_post_ack_days",
+            "non_success_worktree_terminal_days",
+            "metrics_days"
+          ],
+          "properties": {
+            "acknowledged_result_days": {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 3650
+            },
+            "acknowledged_blob_terminal_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "acknowledged_blob_post_ack_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "successful_worktree_post_ack_days": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "non_success_worktree_terminal_days": {
+              "type": "integer",
+              "minimum": 7,
+              "maximum": 3650
+            },
+            "metrics_days": {
+              "type": "integer",
+              "minimum": 30,
+              "maximum": 3650
+            }
+          },
+          "additionalProperties": false
+        },
+        "improvement_enabled": { "type": "boolean" },
+        "allow_current_directory": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "config": {
+      "type": "object",
+      "required": ["version", "kind", "config_version", "settings"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "config" },
+        "config_version": { "$ref": "#/$defs/positiveSafeInteger" },
+        "settings": { "$ref": "#/$defs/safeSettings" }
+      },
+      "additionalProperties": false
+    },
+    "improvementCase": {
+      "type": "object",
+      "required": ["version", "kind", "case_id", "status", "component"],
+      "properties": {
+        "version": { "$ref": "#/$defs/version" },
+        "kind": { "const": "improvement_case" },
+        "case_id": { "$ref": "#/$defs/id" },
+        "component": { "$ref": "#/$defs/id" },
+        "status": {
+          "enum": ["OBSERVING", "CANARY", "PROMOTED", "ROLLED_BACK", "FROZEN"]
+        },
+        "parent_config_version": { "$ref": "#/$defs/positiveSafeInteger" },
+        "candidate_config_version": { "$ref": "#/$defs/positiveSafeInteger" },
+        "rollback_count": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "improvementCaseResult": {
+      "type": "object",
+      "required": ["kind", "feature_enabled", "outcome", "case"],
+      "properties": {
+        "kind": { "const": "improvement_case_result" },
+        "feature_enabled": { "type": "boolean" },
+        "outcome": {
+          "enum": [
+            "INSPECTED",
+            "FEATURE_DISABLED",
+            "CANARY",
+            "FIXTURE_REJECTED",
+            "WAITING_FOR_TIME",
+            "WAITING_FOR_SAMPLES",
+            "MISSING_METRICS",
+            "PROMOTED",
+            "ROLLED_BACK",
+            "FROZEN"
+          ]
+        },
+        "case": { "$ref": "#/$defs/improvementCase" }
+      },
+      "additionalProperties": false
+    },
+    "rpcId": {
+      "oneOf": [
+        { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        { "$ref": "#/$defs/id" }
+      ]
+    },
+    "nonce256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "hmacTag256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "wireLimitsV1_0": {
+      "type": "object",
+      "required": [
+        "request_frame_bytes",
+        "response_frame_bytes",
+        "max_in_flight",
+        "max_events_per_page",
+        "handshake_timeout_ms",
+        "health_timeout_ms",
+        "startup_timeout_ms",
+        "query_timeout_ms",
+        "mutation_timeout_ms",
+        "max_wait_ms",
+        "write_timeout_ms",
+        "stderr_budget_bytes",
+        "stderr_line_bytes"
+      ],
+      "properties": {
+        "request_frame_bytes": { "const": 1048576 },
+        "response_frame_bytes": {
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 8388608
+        },
+        "max_in_flight": { "const": 16 },
+        "max_events_per_page": { "const": 200 },
+        "handshake_timeout_ms": { "const": 2000 },
+        "health_timeout_ms": { "const": 2000 },
+        "startup_timeout_ms": { "const": 15000 },
+        "query_timeout_ms": { "const": 5000 },
+        "mutation_timeout_ms": { "const": 10000 },
+        "max_wait_ms": { "const": 30000 },
+        "write_timeout_ms": { "const": 5000 },
+        "stderr_budget_bytes": { "const": 65536 },
+        "stderr_line_bytes": { "const": 4096 }
+      },
+      "additionalProperties": false
+    },
+    "clientHello": {
+      "type": "object",
+      "required": [
+        "phase",
+        "wire_major",
+        "min_minor",
+        "max_minor",
+        "protocol_versions",
+        "install_id",
+        "client_kind",
+        "client_version",
+        "client_nonce",
+        "max_response_frame"
+      ],
+      "properties": {
+        "phase": { "const": "hello" },
+        "wire_major": { "const": 1 },
+        "min_minor": { "const": 0 },
+        "max_minor": { "const": 0 },
+        "protocol_versions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": { "const": 1 }
+        },
+        "install_id": { "$ref": "#/$defs/id" },
+        "client_kind": { "const": "mcp-bridge-native" },
+        "client_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "client_nonce": { "$ref": "#/$defs/nonce256" },
+        "max_response_frame": {
+          "type": "integer",
+          "minimum": 4096,
+          "maximum": 8388608
+        }
+      },
+      "additionalProperties": false
+    },
+    "serverChallenge": {
+      "type": "object",
+      "required": [
+        "kind",
+        "selected_major",
+        "selected_minor",
+        "protocol_version",
+        "install_id",
+        "daemon_version",
+        "daemon_generation",
+        "server_nonce",
+        "negotiated_limits"
+      ],
+      "properties": {
+        "kind": { "const": "handshake_challenge" },
+        "selected_major": { "const": 1 },
+        "selected_minor": { "const": 0 },
+        "protocol_version": { "const": 1 },
+        "install_id": { "$ref": "#/$defs/id" },
+        "daemon_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "daemon_generation": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "server_nonce": { "$ref": "#/$defs/nonce256" },
+        "negotiated_limits": { "$ref": "#/$defs/wireLimitsV1_0" }
+      },
+      "additionalProperties": false
+    },
+    "clientAuth": {
+      "type": "object",
+      "required": ["phase", "client_nonce", "server_nonce", "client_proof"],
+      "properties": {
+        "phase": { "const": "auth" },
+        "client_nonce": { "$ref": "#/$defs/nonce256" },
+        "server_nonce": { "$ref": "#/$defs/nonce256" },
+        "client_proof": { "$ref": "#/$defs/hmacTag256" }
+      },
+      "additionalProperties": false
+    },
+    "daemonHealth": {
+      "type": "object",
+      "required": [
+        "kind",
+        "daemon_state",
+        "install_id",
+        "consumer_id",
+        "daemon_version",
+        "daemon_generation",
+        "wire_major",
+        "wire_minor",
+        "protocol_version",
+        "data_schema_version",
+        "started_at_ms"
+      ],
+      "properties": {
+        "kind": { "const": "daemon_health" },
+        "daemon_state": { "enum": ["READY", "RUNNING"] },
+        "install_id": { "$ref": "#/$defs/id" },
+        "consumer_id": { "$ref": "#/$defs/id" },
+        "daemon_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "daemon_generation": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "wire_major": { "const": 1 },
+        "wire_minor": { "const": 0 },
+        "protocol_version": { "const": 1 },
+        "data_schema_version": { "$ref": "#/$defs/positiveSafeInteger" },
+        "started_at_ms": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "serverReady": {
+      "type": "object",
+      "required": ["kind", "health", "server_proof"],
+      "properties": {
+        "kind": { "const": "handshake_ready" },
+        "health": { "$ref": "#/$defs/daemonHealth" },
+        "server_proof": { "$ref": "#/$defs/hmacTag256" }
+      },
+      "additionalProperties": false
+    },
+    "emptyParams": { "type": "object", "additionalProperties": false },
+    "listAgentsParams": { "$ref": "#/$defs/emptyParams" },
+    "inspectTaskParams": {
+      "type": "object",
+      "required": ["task_id"],
+      "properties": { "task_id": { "$ref": "#/$defs/id" } },
+      "additionalProperties": false
+    },
+    "waitTaskParams": {
+      "type": "object",
+      "required": ["task_id", "after_seq", "limit", "wait_ms"],
+      "properties": {
+        "task_id": { "$ref": "#/$defs/id" },
+        "after_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "wait_ms": { "type": "integer", "minimum": 0, "maximum": 30000 },
+        "until": { "enum": ["events", "attention"] }
+      },
+      "additionalProperties": false
+    },
+    "cursorBounds": {
+      "type": "object",
+      "required": ["oldest_available_seq", "last_committed_seq"],
+      "properties": {
+        "oldest_available_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "last_committed_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "listAgentsResult": {
+      "type": "object",
+      "required": ["kind", "agents", "config_version"],
+      "properties": {
+        "kind": { "const": "list_agents_result" },
+        "agents": {
+          "type": "array",
+          "maxItems": 5,
+          "items": { "$ref": "#/$defs/adapterCapabilities" }
+        },
+        "config_version": { "$ref": "#/$defs/positiveSafeInteger" },
+        "role_bindings": {
+          "type": "object",
+          "required": ["implementation", "research", "review", "freelancer"],
+          "properties": {
+            "implementation": { "$ref": "#/$defs/bindingTarget" },
+            "research": { "$ref": "#/$defs/bindingTarget" },
+            "review": { "$ref": "#/$defs/bindingTarget" },
+            "freelancer": { "$ref": "#/$defs/bindingTarget" }
+          },
+          "additionalProperties": false
+        },
+        "native_models": {
+          "type": "object",
+          "properties": {
+            "luna": { "type": "string", "minLength": 1, "maxLength": 128 }
+          },
+          "additionalProperties": false
+        },
+        "coordinator_native": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/bindingTarget" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "bindingTarget": {
+      "enum": ["claude", "grok", "kimi", "luna", "pi"]
+    },
+    "delegateTaskResult": {
+      "type": "object",
+      "required": ["kind", "task", "request_digest"],
+      "properties": {
+        "kind": { "const": "delegate_task_result" },
+        "task": { "$ref": "#/$defs/taskSnapshot" },
+        "request_digest": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "nullableAttempt": {
+      "oneOf": [{ "$ref": "#/$defs/attemptSnapshot" }, { "type": "null" }]
+    },
+    "nullableInteraction": {
+      "oneOf": [{ "$ref": "#/$defs/interaction" }, { "type": "null" }]
+    },
+    "nullableResult": {
+      "oneOf": [{ "$ref": "#/$defs/result" }, { "type": "null" }]
+    },
+    "dashboardBootstrap": {
+      "type": "object",
+      "required": ["base_url", "bootstrap_url", "notice"],
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "pattern": "^http://127\\.0\\.0\\.1:[1-9][0-9]{0,4}$"
+        },
+        "bootstrap_url": {
+          "type": "string",
+          "pattern": "^http://127\\.0\\.0\\.1:[1-9][0-9]{0,4}/bootstrap\\?token=[A-Za-z0-9_-]{43}$"
+        },
+        "notice": {
+          "const": "Bootstrap URL is single-use and must not be logged or persisted."
+        }
+      },
+      "additionalProperties": false
+    },
+    "inspectTaskResult": {
+      "type": "object",
+      "required": [
+        "kind",
+        "task",
+        "attempt",
+        "pending_interaction",
+        "terminal_result",
+        "cursor"
+      ],
+      "properties": {
+        "kind": { "const": "inspect_task_result" },
+        "task": { "$ref": "#/$defs/taskSnapshot" },
+        "attempt": { "$ref": "#/$defs/nullableAttempt" },
+        "pending_interaction": { "$ref": "#/$defs/nullableInteraction" },
+        "terminal_result": { "$ref": "#/$defs/nullableResult" },
+        "cursor": { "$ref": "#/$defs/cursorBounds" },
+        "dashboard": { "$ref": "#/$defs/dashboardBootstrap" }
+      },
+      "additionalProperties": false
+    },
+    "waitTaskResult": {
+      "type": "object",
+      "required": [
+        "kind",
+        "task_id",
+        "requested_after_seq",
+        "events",
+        "next_seq",
+        "oldest_available_seq",
+        "last_committed_seq",
+        "terminal_result"
+      ],
+      "properties": {
+        "kind": { "const": "wait_task_result" },
+        "task_id": { "$ref": "#/$defs/id" },
+        "requested_after_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "events": {
+          "type": "array",
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/event" }
+        },
+        "next_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "oldest_available_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "last_committed_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "terminal_result": { "$ref": "#/$defs/nullableResult" }
+      },
+      "additionalProperties": false
+    },
+    "sendTaskInputResult": {
+      "type": "object",
+      "required": ["kind", "interaction", "task"],
+      "properties": {
+        "kind": { "const": "send_task_input_result" },
+        "interaction": { "$ref": "#/$defs/interaction" },
+        "task": { "$ref": "#/$defs/taskSnapshot" }
+      },
+      "additionalProperties": false
+    },
+    "cancelTaskResult": {
+      "type": "object",
+      "required": ["kind", "task"],
+      "properties": {
+        "kind": { "const": "cancel_task_result" },
+        "task": { "$ref": "#/$defs/taskSnapshot" }
+      },
+      "additionalProperties": false
+    },
+    "reviewTaskResult": {
+      "type": "object",
+      "required": ["kind", "result", "verdict", "reviewed_at_ms"],
+      "properties": {
+        "kind": { "const": "review_task_result" },
+        "result": {
+          "allOf": [
+            { "$ref": "#/$defs/result" },
+            {
+              "type": "object",
+              "properties": { "ack_status": { "const": "ACKNOWLEDGED" } }
+            }
+          ]
+        },
+        "verdict": { "enum": ["ACCEPTED", "REJECTED"] },
+        "reviewed_at_ms": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "healthResult": {
+      "type": "object",
+      "required": ["kind", "health", "negotiated_limits"],
+      "properties": {
+        "kind": { "const": "health_result" },
+        "health": { "$ref": "#/$defs/daemonHealth" },
+        "negotiated_limits": { "$ref": "#/$defs/wireLimitsV1_0" }
+      },
+      "additionalProperties": false
+    },
+    "cursorExpiredData": {
+      "type": "object",
+      "required": ["task_id", "oldest_available_seq", "last_committed_seq"],
+      "properties": {
+        "task_id": { "$ref": "#/$defs/id" },
+        "oldest_available_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" },
+        "last_committed_seq": { "$ref": "#/$defs/nonNegativeSafeInteger" }
+      },
+      "additionalProperties": false
+    },
+    "rpcErrorData": {
+      "type": "object",
+      "required": ["error", "diagnostic_ref"],
+      "properties": {
+        "error": { "$ref": "#/$defs/error" },
+        "diagnostic_ref": { "$ref": "#/$defs/id" },
+        "cursor": { "$ref": "#/$defs/cursorExpiredData" }
+      },
+      "additionalProperties": false
+    },
+    "toolErrorResult": {
+      "type": "object",
+      "required": ["kind", "error", "diagnostic_ref"],
+      "properties": {
+        "kind": { "const": "tool_error" },
+        "error": { "$ref": "#/$defs/error" },
+        "diagnostic_ref": { "$ref": "#/$defs/id" },
+        "cursor": { "$ref": "#/$defs/cursorExpiredData" }
+      },
+      "additionalProperties": false
+    },
+    "mcpListAgentsOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/listAgentsResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpDelegateTaskOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/delegateTaskResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpInspectTaskOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/inspectTaskResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpWaitTaskOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/waitTaskResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpSendTaskInputOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/sendTaskInputResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpCancelTaskOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/cancelTaskResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpReviewTaskOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/reviewTaskResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcpImprovementCaseOutput": {
+      "type": "object",
+      "required": ["data"],
+      "properties": {
+        "data": {
+          "oneOf": [
+            { "$ref": "#/$defs/improvementCaseResult" },
+            { "$ref": "#/$defs/toolErrorResult" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "rpcRequestEnvelope": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "$ref": "#/$defs/rpcId" },
+        "method": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "params": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "handshakeRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.handshake" },
+            "params": {
+              "oneOf": [
+                { "$ref": "#/$defs/clientHello" },
+                { "$ref": "#/$defs/clientAuth" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "healthRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.health" },
+            "params": { "$ref": "#/$defs/emptyParams" }
+          }
+        }
+      ]
+    },
+    "listAgentsRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.list_agents" },
+            "params": { "$ref": "#/$defs/listAgentsParams" }
+          }
+        }
+      ]
+    },
+    "delegateTaskRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.delegate_task" },
+            "params": { "$ref": "#/$defs/taskRequest" }
+          }
+        }
+      ]
+    },
+    "inspectTaskRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.inspect_task" },
+            "params": { "$ref": "#/$defs/inspectTaskParams" }
+          }
+        }
+      ]
+    },
+    "waitTaskRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.wait_task" },
+            "params": { "$ref": "#/$defs/waitTaskParams" }
+          }
+        }
+      ]
+    },
+    "sendTaskInputRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.send_task_input" },
+            "params": { "$ref": "#/$defs/interactionResponseCommand" }
+          }
+        }
+      ]
+    },
+    "cancelTaskRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.cancel_task" },
+            "params": { "$ref": "#/$defs/cancelCommand" }
+          }
+        }
+      ]
+    },
+    "reviewTaskRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.review_task" },
+            "params": { "$ref": "#/$defs/reviewAckCommand" }
+          }
+        }
+      ]
+    },
+    "improvementCaseRequest": {
+      "allOf": [
+        { "$ref": "#/$defs/rpcRequestEnvelope" },
+        {
+          "type": "object",
+          "properties": {
+            "method": { "const": "mesh.improvement_case" },
+            "params": { "$ref": "#/$defs/improvementCaseParams" }
+          }
+        }
+      ]
+    },
+    "rpcRequest": {
+      "oneOf": [
+        { "$ref": "#/$defs/handshakeRequest" },
+        { "$ref": "#/$defs/healthRequest" },
+        { "$ref": "#/$defs/listAgentsRequest" },
+        { "$ref": "#/$defs/delegateTaskRequest" },
+        { "$ref": "#/$defs/inspectTaskRequest" },
+        { "$ref": "#/$defs/waitTaskRequest" },
+        { "$ref": "#/$defs/sendTaskInputRequest" },
+        { "$ref": "#/$defs/cancelTaskRequest" },
+        { "$ref": "#/$defs/reviewTaskRequest" },
+        { "$ref": "#/$defs/improvementCaseRequest" }
+      ]
+    },
+    "rpcResult": {
+      "oneOf": [
+        { "$ref": "#/$defs/serverChallenge" },
+        { "$ref": "#/$defs/serverReady" },
+        { "$ref": "#/$defs/healthResult" },
+        { "$ref": "#/$defs/listAgentsResult" },
+        { "$ref": "#/$defs/delegateTaskResult" },
+        { "$ref": "#/$defs/inspectTaskResult" },
+        { "$ref": "#/$defs/waitTaskResult" },
+        { "$ref": "#/$defs/sendTaskInputResult" },
+        { "$ref": "#/$defs/cancelTaskResult" },
+        { "$ref": "#/$defs/reviewTaskResult" },
+        { "$ref": "#/$defs/improvementCaseResult" }
+      ]
+    },
+    "rpcSuccessResponse": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "$ref": "#/$defs/rpcId" },
+        "result": { "$ref": "#/$defs/rpcResult" }
+      },
+      "additionalProperties": false
+    },
+    "rpcErrorObject": {
+      "type": "object",
+      "required": ["code", "message", "data"],
+      "properties": {
+        "code": { "type": "integer", "minimum": -32768, "maximum": -32000 },
+        "message": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "data": { "$ref": "#/$defs/rpcErrorData" }
+      },
+      "additionalProperties": false
+    },
+    "rpcErrorResponse": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "error"],
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "$ref": "#/$defs/rpcId" },
+        "error": { "$ref": "#/$defs/rpcErrorObject" }
+      },
+      "additionalProperties": false
+    },
+    "wireMessage": {
+      "type": "object",
+      "oneOf": [
+        { "$ref": "#/$defs/rpcRequest" },
+        { "$ref": "#/$defs/rpcSuccessResponse" },
+        { "$ref": "#/$defs/rpcErrorResponse" }
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "adapter_instance_id": "fake-local",
+  "attempt_id": "attempt-001",
+  "generation": 1,
+  "kind": "attempt_snapshot",
+  "state": "CREATED",
+  "task_id": "task-001",
+  "version": 1
+}

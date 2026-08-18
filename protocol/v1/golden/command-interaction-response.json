@@ -1,0 +1,14 @@
+{
+  "action": "interaction_response",
+  "command_key": "cmd-input-001",
+  "generation": 0,
+  "interaction_id": "interaction-001",
+  "kind": "command",
+  "nonce": "nonce-001",
+  "operation_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "policy_digest": "1111111111111111111111111111111111111111111111111111111111111111",
+  "config_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+  "response": { "kind": "approve" },
+  "task_id": "task-001",
+  "version": 1
+}

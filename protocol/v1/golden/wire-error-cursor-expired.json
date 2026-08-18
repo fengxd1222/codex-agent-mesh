@@ -1,0 +1,26 @@
+{
+  "jsonrpc": "2.0",
+  "id": 11,
+  "error": {
+    "code": -32001,
+    "message": "Requested task history is no longer retained.",
+    "data": {
+      "error": {
+        "version": 1,
+        "kind": "error",
+        "code": "CURSOR_EXPIRED",
+        "retry_class": "DETERMINISTIC_FAILURE",
+        "effect_class": "NO_EFFECT",
+        "lifecycle": "BEFORE_PROCESS_CREATION",
+        "evidence": "retention_boundary",
+        "message": "Requested task history is no longer retained."
+      },
+      "diagnostic_ref": "diagnostic-001",
+      "cursor": {
+        "task_id": "task-001",
+        "oldest_available_seq": 10,
+        "last_committed_seq": 20
+      }
+    }
+  }
+}

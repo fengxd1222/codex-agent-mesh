@@ -1,0 +1,50 @@
+version = 1
+kind = "config"
+config_version = 1
+
+[settings]
+improvement_enabled = false
+
+[settings.enabled_adapters]
+claude = false
+grok = false
+kimi = false
+
+[settings.transport_priority]
+claude = ["native_json"]
+grok = ["acp"]
+kimi = ["acp"]
+
+# claude | grok | kimi | pi = local CLI. luna = Codex-native (see native_models).
+[settings.role_bindings]
+implementation = "claude"
+research = "grok"
+review = "luna"
+freelancer = "kimi"
+
+[settings.native_models]
+luna = "gpt-5.6-luna"
+
+[settings.concurrency]
+global = 3
+per_adapter = 1
+
+[settings.quality]
+default = "standard"
+allowed = ["standard"]
+
+[settings.effort]
+default = "medium"
+allowed = ["medium"]
+
+[settings.review_chain]
+enabled = false
+reviewer = "luna"
+
+[settings.retention]
+acknowledged_result_days = 90
+acknowledged_blob_terminal_days = 14
+acknowledged_blob_post_ack_days = 7
+successful_worktree_post_ack_days = 7
+non_success_worktree_terminal_days = 30
+metrics_days = 90

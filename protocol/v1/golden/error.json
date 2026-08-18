@@ -1,0 +1,10 @@
+{
+  "code": "PROTOCOL_MALFORMED",
+  "effect_class": "UNKNOWN_EFFECT",
+  "evidence": "stream_eof_after_dispatch",
+  "kind": "error",
+  "lifecycle": "AFTER_PROCESS_CREATION",
+  "message": "Adapter stream ended before terminal record.",
+  "retry_class": "AMBIGUOUS_AFTER_DISPATCH",
+  "version": 1
+}

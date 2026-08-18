@@ -1,0 +1,21 @@
+{
+  "acp_sidecar": "disabled",
+  "adapter": "kimi",
+  "cancel": "session_cancel_method_not_found_in_0_28_1_live",
+  "documented_methods": [
+    "initialize",
+    "authenticate",
+    "session/new",
+    "session/load",
+    "session/resume",
+    "session/prompt",
+    "session/cancel",
+    "session/list",
+    "session/update",
+    "session/request_permission"
+  ],
+  "fallback_transport": "stream_json",
+  "id": "kimi-acp-0.28.1-v1",
+  "proven_version": "0.28.1",
+  "transport": "acp"
+}

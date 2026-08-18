@@ -1,0 +1,66 @@
+# Dependencies and build outputs
+node_modules/
+target/
+dist/
+coverage/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Generated plugin release contents (built by the packaging workflow)
+plugins/codex-agent-mesh/runtime/
+plugins/codex-agent-mesh/bin/
+plugins/codex-agent-mesh/dashboard/
+release/
+artifacts/
+
+# Runtime state, databases, logs, and provider state
+.mesh/
+codex-agent-mesh-data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.log
+logs/
+blobs/
+provider-state/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+credentials/
+secrets/
+
+# OS, editor, and local tooling
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Unrelated generated platform integrations; their source remains user-owned.
+.agents/
+.codex/
+.github/
+.opencode/
+.trellis/
+.zcode/
+.claude/
+.cursor/
+.grok/
+.kimi-code/
+.pi/
+
+# Additional local Trellis runtime/session output.
+.trellis/workspace/
+.trellis/.template-hashes.json
+.trellis/.version

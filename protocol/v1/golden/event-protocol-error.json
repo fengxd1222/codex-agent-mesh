@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "event",
+  "event_id": "event-008",
+  "task_id": "task-001",
+  "seq": 8,
+  "severity": "ERROR",
+  "event_type": "protocol_error",
+  "payload": {
+    "code": "malformed_frame",
+    "message": "Adapter emitted a malformed frame."
+  }
+}

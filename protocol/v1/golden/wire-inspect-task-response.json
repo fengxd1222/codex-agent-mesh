@@ -1,0 +1,23 @@
+{
+  "jsonrpc": "2.0",
+  "id": 6,
+  "result": {
+    "kind": "inspect_task_result",
+    "task": {
+      "version": 1,
+      "kind": "task_snapshot",
+      "task_id": "task-001",
+      "state": "QUEUED",
+      "generation": 1
+    },
+    "attempt": null,
+    "pending_interaction": null,
+    "terminal_result": null,
+    "cursor": { "oldest_available_seq": 0, "last_committed_seq": 0 },
+    "dashboard": {
+      "base_url": "http://127.0.0.1:43127",
+      "bootstrap_url": "http://127.0.0.1:43127/bootstrap?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "notice": "Bootstrap URL is single-use and must not be logged or persisted."
+    }
+  }
+}

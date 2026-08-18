@@ -1,0 +1,15 @@
+{
+  "adapter": "kimi",
+  "adapter_instance_id": "kimi:local:default:ef75dab82f7a5fc3d7d23c9069e249414e43367e5df3103a5f99123f678a4594",
+  "capabilities": ["streaming", "approvals"],
+  "degradation_reason": "local live contract not recorded",
+  "executable_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "executable_path": "kimi.exe",
+  "executable_version": "0.28.1",
+  "kind": "adapter_capabilities",
+  "permission_health": "SUPPORTED",
+  "status": "DEGRADED",
+  "supported_interactions": ["approval"],
+  "transport": "acp",
+  "version": 1
+}

@@ -1,0 +1,25 @@
+{
+  "command_key": "cmd-001",
+  "context_refs": [
+    {
+      "kind": "file",
+      "locator": "README.md"
+    }
+  ],
+  "effect_profile": "READ_ONLY",
+  "effort": "medium",
+  "kind": "task_request",
+  "objective": "Summarize the local protocol.",
+  "permission_policy": "deny_writes",
+  "priority": 0,
+  "quality": "standard",
+  "review_chain_override": "default",
+  "role": "research",
+  "timeout_seconds": 300,
+  "version": 1,
+  "workspace": {
+    "base_commit": "0123456789012345678901234567890123456789",
+    "mode": "isolated_worktree",
+    "path": "D:/repo"
+  }
+}
