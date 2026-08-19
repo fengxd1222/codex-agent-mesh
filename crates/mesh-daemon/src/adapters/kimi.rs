@@ -112,8 +112,8 @@ pub struct KimiSpawnPlan {
     pub acp_script: Option<AcpHandshakeScript>,
 }
 
-/// Offline probe with negotiated capability discovery. Missing digest,
-/// version, or fixture proof is never healthy.
+/// Runtime probe. `kimi acp` is preferred; stream-json is admitted only
+/// when that entry is missing. Fixture `proven_version` is not a pin.
 #[must_use]
 pub fn probe_kimi(evidence: &KimiProbeEvidence) -> KimiProbe {
     let negotiated = negotiated_capabilities();
@@ -131,7 +131,6 @@ pub fn probe_kimi(evidence: &KimiProbeEvidence) -> KimiProbe {
         .as_deref()
         .is_some_and(|help| help.contains("Agent Client Protocol"));
     let file_ok = evidence.executable.is_file() && digest != zero_digest();
-    let version_aligned = parsed_version.as_deref() == Some(PROVEN_VERSION);
     let version = parsed_version
         .clone()
         .unwrap_or_else(|| "unproven".to_owned());
@@ -146,14 +145,14 @@ pub fn probe_kimi(evidence: &KimiProbeEvidence) -> KimiProbe {
     }
     if acp_proven {
         record.transport = AdapterTransport::Acp;
-        assign_acp_capabilities(&mut record, version_aligned);
-        assign_probe_status(&mut record, evidence.live_contract_passed, version_aligned);
+        assign_acp_capabilities(&mut record);
+        record.status = AdmissionStatus::Enabled;
+        record.degradation_reason.clear();
     } else if help_has_fallback {
         record.transport = AdapterTransport::StreamJson;
         record.capabilities.push(AdapterCapability::Streaming);
-        record.status = AdmissionStatus::Degraded;
-        record.degradation_reason =
-            "acp entry not proven; headless stream-json fallback only".into();
+        record.status = AdmissionStatus::Enabled;
+        record.degradation_reason.clear();
     } else {
         record.status = AdmissionStatus::Unavailable;
         record.degradation_reason = "no proven transport surface".into();
@@ -481,41 +480,14 @@ fn unavailable_reason(file_ok: bool, version_ok: bool) -> String {
     .into()
 }
 
-fn assign_acp_capabilities(record: &mut AdmissionRecord, version_aligned: bool) {
-    // Cancellation is NOT admitted: the live matrix proved kimi 0.28.1
-    // answers session/cancel with "Method not found" even though the
-    // documented method list includes it. Only a proven cancel round trip
-    // can re-admit this capability.
-    if version_aligned {
-        record
-            .capabilities
-            .extend([AdapterCapability::Streaming, AdapterCapability::Approvals]);
-        record.supported_interactions.push("approval");
-        record.permission_health = PermissionHealth::Supported;
-    } else {
-        record.capabilities.push(AdapterCapability::Streaming);
-    }
-}
-
-fn assign_probe_status(
-    record: &mut AdmissionRecord,
-    live_contract_passed: bool,
-    version_aligned: bool,
-) {
-    if live_contract_passed
-        && version_aligned
-        && record.permission_health == PermissionHealth::Supported
-    {
-        record.status = AdmissionStatus::Enabled;
-        record.degradation_reason.clear();
-        return;
-    }
-    record.status = AdmissionStatus::Degraded;
-    record.degradation_reason = if version_aligned {
-        "local live contract not recorded".into()
-    } else {
-        format!("unproven version; fixture bundle applies to {PROVEN_VERSION}")
-    };
+fn assign_acp_capabilities(record: &mut AdmissionRecord) {
+    // Cancellation is NOT admitted: live captures answered session/cancel
+    // with "Method not found" even though docs list the method.
+    record
+        .capabilities
+        .extend([AdapterCapability::Streaming, AdapterCapability::Approvals]);
+    record.supported_interactions.push("approval");
+    record.permission_health = PermissionHealth::Supported;
 }
 
 #[cfg(test)]
@@ -563,16 +535,14 @@ mod tests {
     }
 
     #[test]
-    fn kimi_fixture_probe_is_degraded_and_negotiates_capabilities() {
+    fn kimi_fixture_probe_enables_acp_without_live_contract() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "kimi-probe.bin", b"kimi-fixture-binary");
         let probe = probe_kimi(&KimiProbeEvidence::fixture_aligned(exe.clone()));
         let admission = probe.admission;
-        assert_eq!(admission.status, AdmissionStatus::Degraded);
-        assert_eq!(
-            admission.degradation_reason,
-            "local live contract not recorded"
-        );
+        assert_eq!(admission.status, AdmissionStatus::Enabled);
+        assert!(!admission.live_contract_passed);
+        assert!(admission.degradation_reason.is_empty());
         assert_eq!(admission.executable_version, PROVEN_VERSION);
         assert_eq!(admission.transport, AdapterTransport::Acp);
         assert_eq!(admission.permission_health, PermissionHealth::Supported);
@@ -584,19 +554,19 @@ mod tests {
         assert!(probe.negotiated.load_session);
         assert!(!admission.admits(AdapterCapability::SessionResume));
         let protocol = admission.to_protocol_value().expect("protocol");
-        assert_eq!(protocol["status"], "DEGRADED");
+        assert_eq!(protocol["status"], "ENABLED");
         assert_eq!(protocol["transport"], "acp");
     }
 
     #[test]
-    fn kimi_without_acp_proof_falls_back_degraded() {
+    fn kimi_without_acp_proof_enables_headless_fallback() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "kimi-headless.bin", b"headless");
         let mut evidence = KimiProbeEvidence::fixture_aligned(exe);
         evidence.acp_help_stdout = None;
         let probe = probe_kimi(&evidence);
         assert_eq!(probe.admission.transport, AdapterTransport::StreamJson);
-        assert_eq!(probe.admission.status, AdmissionStatus::Degraded);
+        assert_eq!(probe.admission.status, AdmissionStatus::Enabled);
         assert!(probe.admission.admits(AdapterCapability::Streaming));
         assert!(!probe.admission.admits(AdapterCapability::Approvals));
         assert_eq!(
@@ -610,13 +580,14 @@ mod tests {
     }
 
     #[test]
-    fn kimi_enabled_requires_live_contract_and_full_proof() {
+    fn kimi_live_contract_flag_is_independent_of_enabled() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "kimi-live.bin", b"live-proof");
         let mut evidence = KimiProbeEvidence::fixture_aligned(exe);
         evidence.live_contract_passed = true;
         let probe = probe_kimi(&evidence);
         assert_eq!(probe.admission.status, AdmissionStatus::Enabled);
+        assert!(probe.admission.live_contract_passed);
         assert!(probe.admission.degradation_reason.is_empty());
     }
 

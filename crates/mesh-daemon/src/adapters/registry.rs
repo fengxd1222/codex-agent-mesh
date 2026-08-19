@@ -6,9 +6,11 @@
 //! coordinator spawns its own subagent and this registry never probes a
 //! CLI or invents a fallback.
 
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::time::Duration;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
@@ -18,6 +20,8 @@ use crate::adapters::kimi::{self, KimiProbeEvidence};
 use crate::adapters::{AdmissionRecord, AdmissionStatus};
 use crate::settings::{SettingsDocument, SettingsStore, default_settings};
 
+/// Per-command kill deadline. Cold Node CLIs can take a few seconds for `--version`.
+/// Family probes are parallel, so 5s × 3 commands still fits in `LIST_AGENTS_TIMEOUT_MS`.
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 const CLI_FAMILIES: [&str; 4] = ["claude", "grok", "kimi", "pi"];
 const CODEX_NATIVE: [&str; 1] = ["luna"];
@@ -45,15 +49,21 @@ impl AdapterRegistry {
         self.settings.load().unwrap_or_else(|_| default_settings())
     }
 
-    /// Probes every family and returns public capability records.
+    /// Probes enabled families in parallel and returns public capability records.
     #[must_use]
     pub fn list_admissions(&self) -> Vec<AdmissionRecord> {
         let settings = self.load_settings();
-        CLI_FAMILIES
-            .iter()
-            .copied()
-            .map(|family| probe_family(family, &settings))
-            .collect()
+        thread::scope(|scope| {
+            let handles = CLI_FAMILIES
+                .map(|family| (family, scope.spawn(|| probe_family(family, &settings))));
+            handles
+                .map(|(family, handle)| {
+                    handle
+                        .join()
+                        .unwrap_or_else(|_| unavailable(family, "probe failed"))
+                })
+                .into()
+        })
     }
 
     /// Schema-valid `adapter_capabilities` records for `list_agents`.
@@ -199,16 +209,37 @@ fn configured_path(family: &str, settings: &SettingsDocument) -> Option<PathBuf>
 /// Well-known per-user install locations used by the live contract harness.
 #[must_use]
 pub fn default_executable(family: &str) -> Option<PathBuf> {
-    let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))?;
-    let relative = match family {
-        "claude" => Path::new(".local").join("bin").join("claude.exe"),
-        "grok" => Path::new(".grok").join("bin").join("grok.exe"),
-        "kimi" => Path::new(".kimi-code").join("bin").join("kimi.exe"),
-        "pi" => Path::new(".pi").join("bin").join("pi.exe"),
-        _ => return None,
-    };
-    let path = PathBuf::from(home).join(relative);
-    path.is_file().then_some(path)
+    default_executable_candidates(family)
+        .into_iter()
+        .find(|path| path.is_file())
+}
+
+fn default_executable_candidates(family: &str) -> Vec<PathBuf> {
+    let mut paths = Vec::new();
+    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
+        let home = PathBuf::from(home);
+        match family {
+            "claude" => paths.push(home.join(".local").join("bin").join("claude.exe")),
+            "grok" => paths.push(home.join(".grok").join("bin").join("grok.exe")),
+            "kimi" => paths.push(home.join(".kimi-code").join("bin").join("kimi.exe")),
+            "pi" => paths.push(home.join(".pi").join("bin").join("pi.exe")),
+            _ => {}
+        }
+    }
+    if family == "claude"
+        && let Some(appdata) = std::env::var_os("APPDATA")
+    {
+        paths.push(
+            PathBuf::from(appdata)
+                .join("npm")
+                .join("node_modules")
+                .join("@anthropic-ai")
+                .join("claude-code")
+                .join("bin")
+                .join("claude.exe"),
+        );
+    }
+    paths
 }
 
 fn resolve_executable(family: &str, settings: &SettingsDocument) -> Option<PathBuf> {
@@ -219,30 +250,52 @@ fn resolve_executable(family: &str, settings: &SettingsDocument) -> Option<PathB
 
 fn probe_family(family: &str, settings: &SettingsDocument) -> AdmissionRecord {
     let enabled = adapter_enabled(family, settings);
-    let Some(executable) = resolve_executable(family, settings) else {
+    let executable = resolve_executable(family, settings);
+    if family == "pi" {
+        let mut record = unavailable("pi", "pi has no admitted spawn surface");
+        if let Some(path) = executable {
+            record.executable_path = path.to_string_lossy().into_owned();
+        }
+        return record;
+    }
+    if !enabled {
+        let mut record = unavailable(
+            family,
+            if executable.is_some() {
+                "disabled in settings"
+            } else {
+                "executable not found"
+            },
+        );
+        if let Some(path) = executable {
+            record.executable_path = path.to_string_lossy().into_owned();
+        }
+        return record;
+    }
+    let Some(executable) = executable else {
         return unavailable(family, "executable not found");
     };
     let display = executable.to_string_lossy().into_owned();
     let version = capture_stdout(&executable, &["--version"]);
-    let help = capture_stdout(&executable, &["--help"]);
-    let version_aligned = version.as_deref().is_some_and(|stdout| {
-        stdout.contains(match family {
-            "claude" => "2.1.220",
-            "grok" => "1.0.4",
-            "kimi" => "0.28.1",
-            _ => "\0",
-        })
-    });
-    // A settings-enabled, fixture-pinned local CLI is the production
-    // admission bar. The opt-in live-contract file remains a separate proof.
-    let live_ok = enabled && version_aligned;
-    let mut record = match family {
+    let (help, extra_help) = if version.is_some() {
+        (
+            capture_stdout(&executable, &["--help"]),
+            match family {
+                "grok" => capture_stdout(&executable, &["agent", "stdio", "--help"]),
+                "kimi" => capture_stdout(&executable, &["acp", "--help"]),
+                _ => None,
+            },
+        )
+    } else {
+        (None, None)
+    };
+    match family {
         "claude" => claude::probe_claude(&ClaudeProbeEvidence {
             executable: executable.clone(),
             display_path: display,
             version_stdout: version,
             help_stdout: help,
-            live_contract_passed: live_ok,
+            live_contract_passed: false,
             account: "local".into(),
             profile: "default".into(),
         }),
@@ -251,8 +304,8 @@ fn probe_family(family: &str, settings: &SettingsDocument) -> AdmissionRecord {
             display_path: display,
             version_stdout: version,
             help_stdout: help,
-            agent_stdio_help_stdout: capture_stdout(&executable, &["agent", "stdio", "--help"]),
-            live_contract_passed: live_ok,
+            agent_stdio_help_stdout: extra_help,
+            live_contract_passed: false,
             account: "local".into(),
             profile: "default".into(),
         }),
@@ -262,25 +315,15 @@ fn probe_family(family: &str, settings: &SettingsDocument) -> AdmissionRecord {
                 display_path: display,
                 version_stdout: version,
                 help_stdout: help,
-                acp_help_stdout: capture_stdout(&executable, &["acp", "--help"]),
-                live_contract_passed: live_ok,
+                acp_help_stdout: extra_help,
                 account: "local".into(),
                 profile: "default".into(),
+                live_contract_passed: false,
             })
             .admission
         }
-        "pi" => {
-            let mut record = unavailable("pi", "pi has no admitted spawn surface");
-            record.executable_path = display;
-            record
-        }
-        _ => return unavailable(family, "unknown adapter"),
-    };
-    if !enabled {
-        record.status = AdmissionStatus::Unavailable;
-        record.degradation_reason = "disabled in settings".into();
+        _ => unavailable(family, "unknown adapter"),
     }
-    record
 }
 
 fn unavailable(family: &str, reason: &str) -> AdmissionRecord {
@@ -313,20 +356,54 @@ fn unavailable(family: &str, reason: &str) -> AdmissionRecord {
 
 fn capture_stdout(executable: &Path, args: &[&str]) -> Option<String> {
     let mut command = Command::new(executable);
-    command.args(args);
+    command
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x0800_0000);
     }
-    let output = command.output().ok()?;
-    if !output.status.success() {
-        return None;
-    }
-    let _ = PROBE_TIMEOUT;
-    String::from_utf8(output.stdout)
-        .ok()
-        .filter(|text| !text.trim().is_empty())
+    let mut child = command.spawn().ok()?;
+    let mut stdout = match child.stdout.take() {
+        Some(stdout) => stdout,
+        None => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return None;
+        }
+    };
+    thread::scope(|scope| {
+        let reader = scope.spawn(move || {
+            let mut bytes = Vec::new();
+            stdout.read_to_end(&mut bytes).ok()?;
+            Some(bytes)
+        });
+        let deadline = Instant::now() + PROBE_TIMEOUT;
+        let status = loop {
+            match child.try_wait() {
+                Ok(Some(status)) => break status,
+                Ok(None) if Instant::now() < deadline => {
+                    thread::sleep(Duration::from_millis(10));
+                }
+                Ok(None) | Err(_) => {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = reader.join();
+                    return None;
+                }
+            }
+        };
+        let bytes = reader.join().ok()??;
+        if !status.success() {
+            return None;
+        }
+        String::from_utf8(bytes)
+            .ok()
+            .filter(|text| !text.trim().is_empty())
+    })
 }
 
 #[cfg(test)]
@@ -431,5 +508,74 @@ mod tests {
         assert_eq!(names, ["claude", "grok", "kimi", "pi"]);
         assert!(registry.enabled_for_role("review").is_none());
         assert!(registry.enabled_for_role("implementation").is_none());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn capture_stdout_kills_a_hanging_windows_command() {
+        let system_root = std::env::var_os("SystemRoot")
+            .unwrap_or_else(|| std::ffi::OsString::from(r"C:\Windows"));
+        let ping = PathBuf::from(system_root).join("System32").join("ping.exe");
+        let started = Instant::now();
+        let output = capture_stdout(&ping, &["-n", "20", "127.0.0.1"]);
+        let elapsed = started.elapsed();
+        assert!(output.is_none());
+        assert!(
+            elapsed < Duration::from_secs(8),
+            "hanging probe must die under the 20s ping, elapsed={elapsed:?}"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn pi_and_disabled_families_are_unavailable_without_a_live_cli() {
+        let comspec =
+            std::env::var("COMSPEC").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".to_owned());
+        let mut settings = settings_with(false);
+        settings.settings["enabled_adapters"] = json!({
+            "claude": false,
+            "grok": false,
+            "kimi": false,
+            "pi": true
+        });
+        settings.settings["executable_paths"] = json!({
+            "claude": comspec,
+            "grok": comspec,
+            "kimi": comspec,
+            "pi": comspec
+        });
+        let started = Instant::now();
+        let claude = probe_family("claude", &settings);
+        let grok = probe_family("grok", &settings);
+        let kimi = probe_family("kimi", &settings);
+        let pi = probe_family("pi", &settings);
+        let elapsed = started.elapsed();
+        assert_eq!(claude.status, AdmissionStatus::Unavailable);
+        assert_eq!(claude.degradation_reason, "disabled in settings");
+        assert_eq!(claude.executable_path, comspec);
+        assert_eq!(grok.status, AdmissionStatus::Unavailable);
+        assert_eq!(grok.degradation_reason, "disabled in settings");
+        assert_eq!(grok.executable_path, comspec);
+        assert_eq!(kimi.status, AdmissionStatus::Unavailable);
+        assert_eq!(kimi.degradation_reason, "disabled in settings");
+        assert_eq!(kimi.executable_path, comspec);
+        assert_eq!(pi.status, AdmissionStatus::Unavailable);
+        assert_eq!(pi.degradation_reason, "pi has no admitted spawn surface");
+        assert_eq!(pi.executable_path, comspec);
+        assert!(
+            elapsed < Duration::from_secs(1),
+            "disabled/pi probes must not spawn a hanging CLI, elapsed={elapsed:?}"
+        );
+    }
+
+    #[test]
+    fn claude_candidates_include_npm_appdata_install() {
+        let paths = default_executable_candidates("claude");
+        assert!(
+            paths.iter().any(|path| path
+                .components()
+                .any(|component| component.as_os_str() == "@anthropic-ai")),
+            "claude candidates must include the npm @anthropic-ai/claude-code path, got {paths:?}"
+        );
     }
 }

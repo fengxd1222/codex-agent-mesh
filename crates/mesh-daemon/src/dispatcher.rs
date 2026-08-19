@@ -389,6 +389,7 @@ fn dispatch_one(
         admission.adapter,
         &objective,
         plan.acp_auth,
+        plan.acp.then_some(plan.workspace.as_str()),
         Duration::from_secs(timeout.max(1)),
         task_id,
         generation,
@@ -400,6 +401,8 @@ struct PlannedSpawn {
     executable: PathBuf,
     arguments: Vec<OsString>,
     acp_auth: Option<&'static str>,
+    acp: bool,
+    workspace: String,
 }
 
 fn spawn_plan(
@@ -428,9 +431,14 @@ fn spawn_plan(
                 executable: plan.executable,
                 arguments: plan.arguments,
                 acp_auth: None,
+                acp: false,
+                workspace: workspace.to_owned(),
             })
         }
         "grok" => {
+            let selection = grok::select_grok_transport(admission, false)
+                .or_else(|_| grok::select_grok_transport(admission, true))
+                .map_err(|error| error.to_string())?;
             let plan = grok::plan_grok_spawn(
                 executable,
                 admission,
@@ -441,17 +449,23 @@ fn spawn_plan(
                     workspace: workspace.to_owned(),
                     session_id: None,
                 },
-                GrokTransportSelection::Acp,
+                selection,
                 &json!({}),
             )
             .map_err(|error| error.to_string())?;
+            let acp = matches!(selection, GrokTransportSelection::Acp);
             Ok(PlannedSpawn {
                 executable: plan.executable,
                 arguments: plan.arguments,
-                acp_auth: Some("cached_token"),
+                acp_auth: acp.then_some("cached_token"),
+                acp,
+                workspace: workspace.to_owned(),
             })
         }
         "kimi" => {
+            let selection = kimi::select_kimi_transport(admission, false)
+                .or_else(|_| kimi::select_kimi_transport(admission, true))
+                .map_err(|error| error.to_string())?;
             let plan = kimi::plan_kimi_spawn(
                 executable,
                 admission,
@@ -462,7 +476,7 @@ fn spawn_plan(
                     workspace: workspace.to_owned(),
                     session_id: None,
                 },
-                KimiTransportSelection::Acp,
+                selection,
                 &json!({}),
             )
             .map_err(|error| error.to_string())?;
@@ -470,6 +484,8 @@ fn spawn_plan(
                 executable: plan.executable,
                 arguments: plan.arguments,
                 acp_auth: None,
+                acp: matches!(selection, KimiTransportSelection::Acp),
+                workspace: workspace.to_owned(),
             })
         }
         _ => Err("unknown adapter".into()),
@@ -528,14 +544,16 @@ fn drive_attempt(
     adapter: &str,
     objective: &str,
     acp_auth: Option<&str>,
+    acp_workspace: Option<&str>,
     timeout: Duration,
     task_id: &str,
     generation: i64,
 ) {
     let spool = live.stdout_spool_path().to_path_buf();
-    if adapter != "claude"
+    if let Some(workspace) = acp_workspace
+        && adapter != "claude"
         && let Err(reason) = drive_acp(
-            live, &spool, objective, acp_auth, timeout, writer, task_id, generation,
+            live, &spool, objective, workspace, acp_auth, timeout, writer, task_id, generation,
         )
     {
         persist_warning(writer, task_id, generation, &reason);
@@ -596,6 +614,7 @@ fn drive_acp(
     live: &mut SupervisedAttempt,
     spool: &Path,
     objective: &str,
+    workspace: &str,
     auth_method_id: Option<&str>,
     timeout: Duration,
     writer: &WriterHandle,
@@ -642,7 +661,7 @@ fn drive_acp(
         &acp::encode_request(
             session_id,
             acp::METHOD_SESSION_NEW,
-            &json!({ "cwd": ".", "mcpServers": [] }),
+            &json!({ "cwd": workspace, "mcpServers": [] }),
         )
         .map_err(|error| error.to_string())?,
     )

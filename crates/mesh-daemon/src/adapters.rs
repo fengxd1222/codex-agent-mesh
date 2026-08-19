@@ -36,10 +36,8 @@ pub const GROK_FIXTURE_BUNDLE_ID: &str = "grok-acp-1.0.4-v1";
 /// Committed Kimi ACP fixture bundle for this release.
 pub const KIMI_FIXTURE_BUNDLE_ID: &str = "kimi-acp-0.28.1-v1";
 
-/// Conservative v0.1 proven-version matrix: each adapter admits exactly one
-/// recorded version; any other installed version stays degraded and never
-/// claims fixture-proven capabilities. Must stay in lockstep with each
-/// `protocol/v1/fixtures/<adapter>/bundle.json` `proven_version`.
+/// Offline fixture `proven_version` matrix. Used by committed bundle tests
+/// only; production admission does not require the installed CLI to match.
 pub const PROVEN_VERSION_MATRIX: &[(&str, &str)] =
     &[("claude", "2.1.220"), ("grok", "1.0.4"), ("kimi", "0.28.1")];
 
@@ -157,7 +155,9 @@ pub struct QualityEffortMapping {
     pub effort_source: MappingSource,
 }
 
-/// Public adapter health. `Enabled` requires a current live contract.
+/// Public adapter health. `Enabled` means the current executable, parsed
+/// version, help/transport surface, and settings enablement are enough to
+/// dispatch. Live-contract files are optional audit evidence.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AdmissionStatus {
     Enabled,

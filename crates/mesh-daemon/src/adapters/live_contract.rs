@@ -3,10 +3,10 @@
 //! A live contract record is machine-local evidence that one specific
 //! executable digest/version completed the opt-in live checks on this
 //! machine. Records are never committed to the repository and never part
-//! of offline CI; a PASS only lifts an otherwise fixture-proven admission
-//! from DEGRADED to ENABLED when the digest, version, and fixture bundle
-//! all still match. Any mismatch — including a binary that changed after
-//! the record was written — keeps the admission degraded.
+//! of offline CI. Production `list_agents` admission does not wait for a
+//! PASS; the record is optional audit evidence and must not pin runtime
+//! CLI versions. Any mismatch — including a binary that changed after the
+//! record was written — means the file does not admit extra capabilities.
 
 use std::path::{Path, PathBuf};
 

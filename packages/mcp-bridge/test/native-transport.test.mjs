@@ -102,6 +102,7 @@ function transport(mode, options = {}) {
 }
 
 test("wait_task uses the exact five-second margin and 35-second cap", () => {
+  assert.equal(requestDeadlineMs("mesh.list_agents", {}), 30_000);
   assert.equal(requestDeadlineMs("mesh.inspect_task", {}), 5_000);
   assert.equal(
     requestDeadlineMs("mesh.improvement_case", { action: "inspect" }),

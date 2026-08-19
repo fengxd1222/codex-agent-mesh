@@ -20,9 +20,12 @@ covers only `SAFE_PRE_DISPATCH` / `SAFE_PROVEN_NO_EFFECT` automatic retry.
 Production daemon dispatch launches a settings-enabled local Claude, Grok, or Kimi CLI through the supervisor and persists live events for the dashboard and `wait_task`. Role bindings are live settings (`implementation`/`research`/`review`/`freelancer`). GPT bind targets such as Luna Max are Codex-native: Codex creates a subagent and mesh never probes or spawns a CLI.
 
 This is still a development checkpoint, not an end-to-end provider release.
-Claude, Grok, and Kimi have offline adapter fixtures and opt-in local live
-contract evidence for the recorded versions. Unsupported capabilities remain
-unadmitted, including Grok/Kimi cancellation for the tested versions.
+Claude, Grok, and Kimi have offline adapter fixtures for tests. Production
+admission uses the installed executable, a parsed version for identification
+and audit, the current help/transport surface, and settings enablement.
+Fixture `proven_version` is not a runtime pin. Unsupported transport or
+capability surfaces stay unadmitted, including Grok/Kimi cancellation until a
+cancel round-trip is proven.
 Production `list_agents` reports the live probe. A role is usable only when that record is `ENABLED`.
 The privileged pipe matrix, true standard-user Scheduled Task/Job fixture,
 100-client singleton fixture, process-boundary reconnect matrix, and clean-

@@ -83,7 +83,8 @@ pub struct ClaudeSpawnPlan {
     pub mapping: QualityEffortMapping,
 }
 
-/// Offline probe. Missing digest, version, or fixture proof is never healthy.
+/// Runtime probe. Fixture `proven_version` is not a pin; capabilities come
+/// from the current help/transport surface.
 #[must_use]
 pub fn probe_claude(evidence: &ClaudeProbeEvidence) -> AdmissionRecord {
     let digest = digest_file(&evidence.executable).unwrap_or_else(|_| zero_digest().to_owned());
@@ -91,12 +92,11 @@ pub fn probe_claude(evidence: &ClaudeProbeEvidence) -> AdmissionRecord {
         .version_stdout
         .as_deref()
         .and_then(parse_claude_version);
-    let help_has_stream = evidence
-        .help_stdout
-        .as_deref()
-        .is_some_and(|help| help.contains("stream-json"));
+    let help = evidence.help_stdout.as_deref().unwrap_or("");
+    let help_has_stream = help.contains("stream-json");
+    let help_has_permission =
+        help.contains("--permission-mode") || help.contains("--permission-prompt-tool");
     let file_ok = evidence.executable.is_file() && digest != zero_digest();
-    let version_aligned = parsed_version.as_deref() == Some(PROVEN_VERSION);
     let version = parsed_version
         .clone()
         .unwrap_or_else(|| "unproven".to_owned());
@@ -106,13 +106,14 @@ pub fn probe_claude(evidence: &ClaudeProbeEvidence) -> AdmissionRecord {
         record.degradation_reason = unavailable_reason(file_ok, parsed_version.is_some());
         return record;
     }
-    assign_proven_capabilities(&mut record, help_has_stream, version_aligned);
-    assign_probe_status(
-        &mut record,
-        evidence.live_contract_passed,
-        version_aligned,
-        help_has_stream,
-    );
+    assign_runtime_capabilities(&mut record, help_has_stream, help_has_permission);
+    if help_has_stream {
+        record.status = AdmissionStatus::Enabled;
+        record.degradation_reason.clear();
+    } else {
+        record.status = AdmissionStatus::Unavailable;
+        record.degradation_reason = "no proven transport surface".into();
+    }
     record
 }
 
@@ -713,48 +714,19 @@ fn unavailable_reason(file_ok: bool, version_ok: bool) -> String {
     .into()
 }
 
-fn assign_proven_capabilities(
+fn assign_runtime_capabilities(
     record: &mut AdmissionRecord,
     help_has_stream: bool,
-    version_aligned: bool,
+    help_has_permission: bool,
 ) {
-    if help_has_stream && version_aligned {
-        record.capabilities.extend([
-            AdapterCapability::Streaming,
-            AdapterCapability::Cancellation,
-            AdapterCapability::Approvals,
-            AdapterCapability::Usage,
-        ]);
-        record.supported_interactions.push("approval");
-        record.permission_health = PermissionHealth::Supported;
-    } else if help_has_stream {
+    if help_has_stream {
         record.capabilities.push(AdapterCapability::Streaming);
     }
-}
-
-fn assign_probe_status(
-    record: &mut AdmissionRecord,
-    live_contract_passed: bool,
-    version_aligned: bool,
-    help_has_stream: bool,
-) {
-    if live_contract_passed
-        && version_aligned
-        && help_has_stream
-        && record.permission_health == PermissionHealth::Supported
-    {
-        record.status = AdmissionStatus::Enabled;
-        record.degradation_reason.clear();
-        return;
+    if help_has_permission {
+        record.capabilities.push(AdapterCapability::Approvals);
+        record.supported_interactions.push("approval");
+        record.permission_health = PermissionHealth::Supported;
     }
-    record.status = AdmissionStatus::Degraded;
-    record.degradation_reason = if !version_aligned {
-        format!("unproven version; fixture bundle applies to {PROVEN_VERSION}")
-    } else if !help_has_stream {
-        "stream-json flag not proven from help".into()
-    } else {
-        "local live contract not recorded".into()
-    };
 }
 
 #[cfg(test)]
@@ -795,20 +767,20 @@ mod tests {
     }
 
     #[test]
-    fn claude_fixture_probe_is_degraded_without_live_contract() {
+    fn claude_fixture_probe_enables_from_help_surface_without_live_contract() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "claude-probe.bin", b"claude-fixture-binary");
         let admission = probe_claude(&ClaudeProbeEvidence::fixture_aligned(exe.clone()));
-        assert_eq!(admission.status, AdmissionStatus::Degraded);
-        assert_eq!(
-            admission.degradation_reason,
-            "local live contract not recorded"
-        );
+        assert_eq!(admission.status, AdmissionStatus::Enabled);
+        assert!(!admission.live_contract_passed);
+        assert!(admission.degradation_reason.is_empty());
         assert_eq!(admission.executable_version, PROVEN_VERSION);
         assert_eq!(admission.transport, AdapterTransport::StreamJson);
         assert_eq!(admission.permission_health, PermissionHealth::Supported);
         assert!(admission.admits(AdapterCapability::Streaming));
         assert!(admission.admits(AdapterCapability::Approvals));
+        assert!(!admission.admits(AdapterCapability::Cancellation));
+        assert!(!admission.admits(AdapterCapability::Usage));
         assert!(!admission.admits(AdapterCapability::SessionResume));
         assert!(!admission.acp_sidecar.enabled);
         assert_eq!(admission.fixture_bundle_id, CLAUDE_FIXTURE_BUNDLE_ID);
@@ -817,27 +789,27 @@ mod tests {
             digest_file(&exe).expect("digest")
         );
         let protocol = admission.to_protocol_value().expect("protocol");
-        assert_eq!(protocol["status"], "DEGRADED");
+        assert_eq!(protocol["status"], "ENABLED");
         assert_eq!(protocol["transport"], "stream_json");
     }
 
     #[test]
-    fn claude_unproven_version_does_not_claim_permission() {
+    fn claude_unproven_version_still_follows_current_help_surface() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "claude-other.bin", b"other");
         let mut evidence = ClaudeProbeEvidence::fixture_aligned(exe);
         evidence.version_stdout = Some("2.0.0".into());
         let admission = probe_claude(&evidence);
-        assert_eq!(admission.status, AdmissionStatus::Degraded);
-        assert_eq!(admission.permission_health, PermissionHealth::Unsupported);
+        assert_eq!(admission.status, AdmissionStatus::Enabled);
+        assert_eq!(admission.executable_version, "2.0.0");
+        assert_eq!(admission.permission_health, PermissionHealth::Supported);
         assert!(admission.admits(AdapterCapability::Streaming));
-        assert!(!admission.admits(AdapterCapability::Approvals));
+        assert!(admission.admits(AdapterCapability::Approvals));
         assert!(!admission.admits(AdapterCapability::Cancellation));
-        assert_ne!(admission.status, AdmissionStatus::Enabled);
     }
 
     #[test]
-    fn claude_enabled_requires_live_contract_and_full_proof() {
+    fn claude_live_contract_flag_is_independent_of_enabled() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "claude-live.bin", b"live-proof");
         let mut evidence = ClaudeProbeEvidence::fixture_aligned(exe);

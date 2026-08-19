@@ -14,10 +14,13 @@ use thiserror::Error;
 use crate::install_record::InstallRecordStore;
 use crate::install_store::StableInstallRecordStore;
 use crate::reader::{PublicEvent, ReaderPool, TaskSummary};
+use crate::storage::StorageError;
 
 const POLL: Duration = Duration::from_millis(200);
 const PAGE: usize = 50;
 const READ_TIMEOUT: Duration = Duration::from_secs(2);
+const INITIAL_BACKOFF: Duration = Duration::from_millis(50);
+const MAX_BACKOFF: Duration = Duration::from_secs(2);
 
 /// Redaction-safe follow failure.
 #[derive(Clone, Copy, Debug, Error, Eq, PartialEq)]
@@ -28,6 +31,15 @@ pub enum FollowError {
     NotFound,
     #[error("follow storage is unavailable")]
     Storage,
+    #[error("follow output is closed")]
+    Output,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum FollowReadClass {
+    Transient,
+    Missing,
+    Permanent,
 }
 
 /// Follows one task, or the newest task when `task_id` is omitted.
@@ -48,7 +60,15 @@ pub fn run_follow(task_id: Option<&str>) -> Result<(), FollowError> {
     if color {
         mesh_win32::enable_stdout_virtual_terminal();
     }
-    follow_task(&reader, &consumer_id, &task_id, &mut stdout, color)
+    follow_loop(
+        &ReaderFollow {
+            reader: &reader,
+            consumer_id: &consumer_id,
+        },
+        &task_id,
+        &mut stdout,
+        color,
+    )
 }
 
 fn color_enabled(stdout: &io::Stdout) -> bool {
@@ -82,11 +102,54 @@ fn newest_task_id(reader: &ReaderPool) -> Result<String, FollowError> {
         .ok_or(FollowError::NotFound)
 }
 
-fn follow_task(
-    reader: &ReaderPool,
-    consumer_id: &str,
+trait FollowFeed {
+    fn events(&self, task_id: &str, after_seq: i64) -> Result<Vec<PublicEvent>, StorageError>;
+    fn terminal(&self, task_id: &str) -> Result<bool, StorageError>;
+}
+
+struct ReaderFollow<'a> {
+    reader: &'a ReaderPool,
+    consumer_id: &'a str,
+}
+
+impl FollowFeed for ReaderFollow<'_> {
+    fn events(&self, task_id: &str, after_seq: i64) -> Result<Vec<PublicEvent>, StorageError> {
+        self.reader
+            .public_events_after(
+                task_id,
+                after_seq,
+                PAGE,
+                READ_TIMEOUT,
+                Some(self.consumer_id),
+            )
+            .map(|page| page.events)
+    }
+
+    fn terminal(&self, task_id: &str) -> Result<bool, StorageError> {
+        let tasks = self.reader.task_summaries(200, READ_TIMEOUT)?;
+        match tasks.into_iter().find(|task| task.task_id == task_id) {
+            Some(task) => Ok(is_terminal(&task)),
+            None => Err(StorageError::InvalidRequest),
+        }
+    }
+}
+
+fn classify_follow_storage(error: &StorageError) -> FollowReadClass {
+    match error {
+        StorageError::QueryDeadline | StorageError::ReaderSaturated => FollowReadClass::Transient,
+        StorageError::InvalidRequest => FollowReadClass::Missing,
+        _ => FollowReadClass::Permanent,
+    }
+}
+
+fn next_follow_backoff(current: Duration) -> Duration {
+    current.saturating_mul(2).min(MAX_BACKOFF)
+}
+
+fn follow_loop<S: FollowFeed, W: Write>(
+    source: &S,
     task_id: &str,
-    output: &mut impl Write,
+    output: &mut W,
     color: bool,
 ) -> Result<(), FollowError> {
     let mut stream = FollowStream {
@@ -98,42 +161,52 @@ fn follow_task(
         "{}",
         stream.paint(Tone::Dim, &format!("follow  {task_id}"))
     )
-    .map_err(|_| FollowError::Storage)?;
+    .map_err(|_| FollowError::Output)?;
     let _ = output.flush();
     let mut after_seq = 0_i64;
+    let mut backoff = INITIAL_BACKOFF;
     loop {
-        let page = reader
-            .public_events_after(task_id, after_seq, PAGE, READ_TIMEOUT, Some(consumer_id))
-            .map_err(|error| match error {
-                crate::storage::StorageError::InvalidRequest => FollowError::NotFound,
-                _ => FollowError::Storage,
-            })?;
-        for event in &page.events {
-            if let Some(piece) = follow_piece(event) {
-                stream
-                    .write(output, event.seq, &piece)
-                    .map_err(|_| FollowError::Storage)?;
+        match source.events(task_id, after_seq) {
+            Ok(events) => {
+                backoff = INITIAL_BACKOFF;
+                for event in &events {
+                    if let Some(piece) = follow_piece(event) {
+                        stream
+                            .write(output, event.seq, &piece)
+                            .map_err(|_| FollowError::Output)?;
+                    }
+                    after_seq = event.seq;
+                }
+                let _ = output.flush();
+                match source.terminal(task_id) {
+                    Ok(true) if events.is_empty() => {
+                        stream.finish(output).map_err(|_| FollowError::Output)?;
+                        return Ok(());
+                    }
+                    Ok(_) => {
+                        if events.is_empty() {
+                            thread::sleep(POLL);
+                        }
+                    }
+                    Err(error) => match classify_follow_storage(&error) {
+                        FollowReadClass::Transient => {
+                            thread::sleep(backoff);
+                            backoff = next_follow_backoff(backoff);
+                        }
+                        FollowReadClass::Missing => return Err(FollowError::NotFound),
+                        FollowReadClass::Permanent => return Err(FollowError::Storage),
+                    },
+                }
             }
-            after_seq = event.seq;
+            Err(error) => match classify_follow_storage(&error) {
+                FollowReadClass::Transient => {
+                    thread::sleep(backoff);
+                    backoff = next_follow_backoff(backoff);
+                }
+                FollowReadClass::Missing => return Err(FollowError::NotFound),
+                FollowReadClass::Permanent => return Err(FollowError::Storage),
+            },
         }
-        let _ = output.flush();
-        if task_is_terminal(reader, task_id)? && page.events.is_empty() {
-            stream.finish(output).map_err(|_| FollowError::Storage)?;
-            return Ok(());
-        }
-        if page.events.is_empty() {
-            thread::sleep(POLL);
-        }
-    }
-}
-
-fn task_is_terminal(reader: &ReaderPool, task_id: &str) -> Result<bool, FollowError> {
-    let tasks = reader
-        .task_summaries(200, READ_TIMEOUT)
-        .map_err(|_| FollowError::Storage)?;
-    match tasks.into_iter().find(|task| task.task_id == task_id) {
-        Some(task) => Ok(is_terminal(&task)),
-        None => Err(FollowError::NotFound),
     }
 }
 
@@ -782,5 +855,150 @@ mod tests {
         assert!(painted.starts_with("   38  text   "));
         assert_eq!(painted.lines().count(), 1);
         assert!(!painted.contains("default-config.toml"));
+    }
+
+    struct ScriptedFeed {
+        pages: std::sync::Mutex<std::collections::VecDeque<Result<Vec<PublicEvent>, StorageError>>>,
+        terminals: std::sync::Mutex<std::collections::VecDeque<Result<bool, StorageError>>>,
+        afters: std::sync::Mutex<Vec<i64>>,
+    }
+
+    impl FollowFeed for ScriptedFeed {
+        fn events(&self, _task_id: &str, after_seq: i64) -> Result<Vec<PublicEvent>, StorageError> {
+            self.afters.lock().expect("afters").push(after_seq);
+            self.pages
+                .lock()
+                .expect("pages")
+                .pop_front()
+                .expect("scripted page")
+        }
+
+        fn terminal(&self, _task_id: &str) -> Result<bool, StorageError> {
+            self.terminals
+                .lock()
+                .expect("terminals")
+                .pop_front()
+                .expect("scripted terminal")
+        }
+    }
+
+    struct FailWrite;
+
+    impl Write for FailWrite {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "closed"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn classify_follow_storage_retries_deadlines_not_corruption() {
+        assert_eq!(
+            classify_follow_storage(&StorageError::QueryDeadline),
+            FollowReadClass::Transient
+        );
+        assert_eq!(
+            classify_follow_storage(&StorageError::ReaderSaturated),
+            FollowReadClass::Transient
+        );
+        assert_eq!(
+            classify_follow_storage(&StorageError::InvalidRequest),
+            FollowReadClass::Missing
+        );
+        assert_eq!(
+            classify_follow_storage(&StorageError::BlobCorruption("x".into())),
+            FollowReadClass::Permanent
+        );
+    }
+
+    #[test]
+    fn follow_backoff_doubles_up_to_two_seconds() {
+        assert_eq!(
+            next_follow_backoff(Duration::from_millis(50)),
+            Duration::from_millis(100)
+        );
+        assert_eq!(
+            next_follow_backoff(Duration::from_secs(2)),
+            Duration::from_secs(2)
+        );
+    }
+
+    #[test]
+    fn follow_retries_transient_storage_and_exits_on_empty_terminal_page() {
+        let feed = ScriptedFeed {
+            pages: std::sync::Mutex::new([Err(StorageError::QueryDeadline), Ok(Vec::new())].into()),
+            terminals: std::sync::Mutex::new([Ok(true)].into()),
+            afters: std::sync::Mutex::new(Vec::new()),
+        };
+        let mut out = Vec::new();
+        follow_loop(&feed, "task-1", &mut out, false).expect("follow");
+        assert_eq!(feed.afters.lock().expect("afters").as_slice(), &[0, 0]);
+        assert!(
+            String::from_utf8(out)
+                .expect("utf8")
+                .contains("follow  task-1")
+        );
+    }
+
+    #[test]
+    fn follow_keeps_cursor_across_transient_errors() {
+        let page = vec![event("text_delta", &json!({"text": "hi"}))];
+        let feed = ScriptedFeed {
+            pages: std::sync::Mutex::new(
+                [Ok(page), Err(StorageError::ReaderSaturated), Ok(Vec::new())].into(),
+            ),
+            terminals: std::sync::Mutex::new([Ok(false), Ok(true)].into()),
+            afters: std::sync::Mutex::new(Vec::new()),
+        };
+        let mut out = Vec::new();
+        follow_loop(&feed, "t1", &mut out, false).expect("follow");
+        assert_eq!(feed.afters.lock().expect("afters").as_slice(), &[0, 1, 1]);
+    }
+
+    #[test]
+    fn follow_permanent_storage_error_does_not_retry() {
+        let feed = ScriptedFeed {
+            pages: std::sync::Mutex::new(
+                [Err(StorageError::BlobCorruption("events".into()))].into(),
+            ),
+            terminals: std::sync::Mutex::new(std::collections::VecDeque::new()),
+            afters: std::sync::Mutex::new(Vec::new()),
+        };
+        let mut out = Vec::new();
+        assert_eq!(
+            follow_loop(&feed, "task-1", &mut out, false),
+            Err(FollowError::Storage)
+        );
+    }
+
+    #[test]
+    fn follow_missing_task_is_not_retried() {
+        let feed = ScriptedFeed {
+            pages: std::sync::Mutex::new([Err(StorageError::InvalidRequest)].into()),
+            terminals: std::sync::Mutex::new(std::collections::VecDeque::new()),
+            afters: std::sync::Mutex::new(Vec::new()),
+        };
+        let mut out = Vec::new();
+        assert_eq!(
+            follow_loop(&feed, "missing", &mut out, false),
+            Err(FollowError::NotFound)
+        );
+    }
+
+    #[test]
+    fn follow_output_disconnect_is_not_a_storage_error() {
+        let feed = ScriptedFeed {
+            pages: std::sync::Mutex::new(std::collections::VecDeque::new()),
+            terminals: std::sync::Mutex::new(std::collections::VecDeque::new()),
+            afters: std::sync::Mutex::new(Vec::new()),
+        };
+        let mut out = FailWrite;
+        assert_eq!(
+            follow_loop(&feed, "task-1", &mut out, false),
+            Err(FollowError::Output)
+        );
     }
 }

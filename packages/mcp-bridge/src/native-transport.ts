@@ -26,6 +26,8 @@ export const BUNDLED_SETUP_ARGUMENTS = [
 ] as const;
 const REQUEST_LIMIT = 1_048_576;
 const RESPONSE_LIMIT = 8_388_608;
+/** Must match daemon `LIST_AGENTS_TIMEOUT_MS`; adapter probes can take several seconds. */
+const LIST_AGENTS_TIMEOUT_MS = 30_000;
 const STDERR_BUDGET = 65_536;
 const STDERR_LINE_LIMIT = 4_096;
 const ARTIFACT_METADATA_LIMIT = 4_096;
@@ -215,15 +217,15 @@ function replaceControlCharacters(value: string): string {
     .join("");
 }
 
-/** Frozen v1 request deadline; wait_task gets the contract's full 5s margin. */
+/** Per-method helper deadline. `list_agents` is longer so live adapter probes can finish. */
 export function requestDeadlineMs(method: string, params: RpcParams): number {
   if (method === "mesh.health") return 2_000;
   if (method === "mesh.wait_task") {
     const requested = typeof params.wait_ms === "number" ? params.wait_ms : 0;
     return Math.min(35_000, Math.max(5_000, requested + 5_000));
   }
-  if (method === "mesh.list_agents" || method === "mesh.inspect_task")
-    return 5_000;
+  if (method === "mesh.list_agents") return LIST_AGENTS_TIMEOUT_MS;
+  if (method === "mesh.inspect_task") return 5_000;
   if (method === "mesh.improvement_case" && params.action === "inspect")
     return 5_000;
   return 10_000;

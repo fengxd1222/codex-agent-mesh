@@ -104,7 +104,8 @@ pub struct GrokSpawnPlan {
     pub acp_script: Option<AcpHandshakeScript>,
 }
 
-/// Offline probe. Missing digest, version, or fixture proof is never healthy.
+/// Runtime probe. ACP stdio is the preferred surface; headless
+/// `streaming-json` is admitted only when that entry is missing.
 #[must_use]
 pub fn probe_grok(evidence: &GrokProbeEvidence) -> AdmissionRecord {
     let digest = digest_file(&evidence.executable).unwrap_or_else(|_| zero_digest().to_owned());
@@ -121,7 +122,6 @@ pub fn probe_grok(evidence: &GrokProbeEvidence) -> AdmissionRecord {
         .as_deref()
         .is_some_and(|help| help.contains("grok agent stdio"));
     let file_ok = evidence.executable.is_file() && digest != zero_digest();
-    let version_aligned = parsed_version.as_deref() == Some(PROVEN_VERSION);
     let version = parsed_version
         .clone()
         .unwrap_or_else(|| "unproven".to_owned());
@@ -133,14 +133,14 @@ pub fn probe_grok(evidence: &GrokProbeEvidence) -> AdmissionRecord {
     }
     if stdio_proven {
         record.transport = AdapterTransport::Acp;
-        assign_acp_capabilities(&mut record, version_aligned);
-        assign_probe_status(&mut record, evidence.live_contract_passed, version_aligned);
+        assign_acp_capabilities(&mut record);
+        record.status = AdmissionStatus::Enabled;
+        record.degradation_reason.clear();
     } else if help_has_fallback {
         record.transport = AdapterTransport::StreamJson;
         record.capabilities.push(AdapterCapability::Streaming);
-        record.status = AdmissionStatus::Degraded;
-        record.degradation_reason =
-            "acp stdio entry not proven; headless streaming fallback only".into();
+        record.status = AdmissionStatus::Enabled;
+        record.degradation_reason.clear();
     } else {
         record.status = AdmissionStatus::Unavailable;
         record.degradation_reason = "no proven transport surface".into();
@@ -459,41 +459,14 @@ fn unavailable_reason(file_ok: bool, version_ok: bool) -> String {
     .into()
 }
 
-fn assign_acp_capabilities(record: &mut AdmissionRecord, version_aligned: bool) {
-    // Cancellation is NOT admitted: the live matrix proved grok 1.0.4
-    // answers session/cancel with "Method not found" (same as kimi
-    // 0.28.1). Only a proven cancel round trip can re-admit it;
-    // mesh-level tree termination remains available regardless.
-    if version_aligned {
-        record
-            .capabilities
-            .extend([AdapterCapability::Streaming, AdapterCapability::Approvals]);
-        record.supported_interactions.push("approval");
-        record.permission_health = PermissionHealth::Supported;
-    } else {
-        record.capabilities.push(AdapterCapability::Streaming);
-    }
-}
-
-fn assign_probe_status(
-    record: &mut AdmissionRecord,
-    live_contract_passed: bool,
-    version_aligned: bool,
-) {
-    if live_contract_passed
-        && version_aligned
-        && record.permission_health == PermissionHealth::Supported
-    {
-        record.status = AdmissionStatus::Enabled;
-        record.degradation_reason.clear();
-        return;
-    }
-    record.status = AdmissionStatus::Degraded;
-    record.degradation_reason = if version_aligned {
-        "local live contract not recorded".into()
-    } else {
-        format!("unproven version; fixture bundle applies to {PROVEN_VERSION}")
-    };
+fn assign_acp_capabilities(record: &mut AdmissionRecord) {
+    // Cancellation is NOT admitted: live captures answered session/cancel
+    // with "Method not found". Mesh-level tree termination stays available.
+    record
+        .capabilities
+        .extend([AdapterCapability::Streaming, AdapterCapability::Approvals]);
+    record.supported_interactions.push("approval");
+    record.permission_health = PermissionHealth::Supported;
 }
 
 #[cfg(test)]
@@ -541,15 +514,13 @@ mod tests {
     }
 
     #[test]
-    fn grok_fixture_probe_is_degraded_without_live_contract() {
+    fn grok_fixture_probe_enables_acp_stdio_without_live_contract() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "grok-probe.bin", b"grok-fixture-binary");
         let admission = probe_grok(&GrokProbeEvidence::fixture_aligned(exe.clone()));
-        assert_eq!(admission.status, AdmissionStatus::Degraded);
-        assert_eq!(
-            admission.degradation_reason,
-            "local live contract not recorded"
-        );
+        assert_eq!(admission.status, AdmissionStatus::Enabled);
+        assert!(!admission.live_contract_passed);
+        assert!(admission.degradation_reason.is_empty());
         assert_eq!(admission.executable_version, PROVEN_VERSION);
         assert_eq!(admission.transport, AdapterTransport::Acp);
         assert_eq!(admission.permission_health, PermissionHealth::Supported);
@@ -559,19 +530,19 @@ mod tests {
         assert!(!admission.admits(AdapterCapability::SessionResume));
         assert_eq!(admission.fixture_bundle_id, GROK_FIXTURE_BUNDLE_ID);
         let protocol = admission.to_protocol_value().expect("protocol");
-        assert_eq!(protocol["status"], "DEGRADED");
+        assert_eq!(protocol["status"], "ENABLED");
         assert_eq!(protocol["transport"], "acp");
     }
 
     #[test]
-    fn grok_without_stdio_proof_falls_back_degraded() {
+    fn grok_without_stdio_proof_enables_headless_fallback() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "grok-headless.bin", b"headless");
         let mut evidence = GrokProbeEvidence::fixture_aligned(exe);
         evidence.agent_stdio_help_stdout = None;
         let admission = probe_grok(&evidence);
         assert_eq!(admission.transport, AdapterTransport::StreamJson);
-        assert_eq!(admission.status, AdmissionStatus::Degraded);
+        assert_eq!(admission.status, AdmissionStatus::Enabled);
         assert!(admission.admits(AdapterCapability::Streaming));
         assert!(!admission.admits(AdapterCapability::Approvals));
         assert_eq!(admission.permission_health, PermissionHealth::Unsupported);
@@ -586,26 +557,29 @@ mod tests {
     }
 
     #[test]
-    fn grok_unproven_version_does_not_claim_permission() {
+    fn grok_unproven_version_still_uses_acp_stdio_surface() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "grok-other.bin", b"other");
         let mut evidence = GrokProbeEvidence::fixture_aligned(exe);
         evidence.version_stdout = Some("grok 1.2.0 (abcdef)".into());
         let admission = probe_grok(&evidence);
-        assert_eq!(admission.status, AdmissionStatus::Degraded);
-        assert_eq!(admission.permission_health, PermissionHealth::Unsupported);
+        assert_eq!(admission.status, AdmissionStatus::Enabled);
+        assert_eq!(admission.executable_version, "1.2.0");
+        assert_eq!(admission.permission_health, PermissionHealth::Supported);
         assert!(admission.admits(AdapterCapability::Streaming));
-        assert!(!admission.admits(AdapterCapability::Approvals));
+        assert!(admission.admits(AdapterCapability::Approvals));
+        assert!(!admission.admits(AdapterCapability::Cancellation));
     }
 
     #[test]
-    fn grok_enabled_requires_live_contract_and_full_proof() {
+    fn grok_live_contract_flag_is_independent_of_enabled() {
         let root = tempfile::tempdir().expect("tempdir");
         let exe = write_exe(&root, "grok-live.bin", b"live-proof");
         let mut evidence = GrokProbeEvidence::fixture_aligned(exe);
         evidence.live_contract_passed = true;
         let admission = probe_grok(&evidence);
         assert_eq!(admission.status, AdmissionStatus::Enabled);
+        assert!(admission.live_contract_passed);
         assert!(admission.degradation_reason.is_empty());
     }
 

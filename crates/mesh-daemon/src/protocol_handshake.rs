@@ -29,6 +29,8 @@ const HANDSHAKE_AUTH_ID: &str = "handshake-2";
 const REQUEST_FRAME_LIMIT: u32 = 1_048_576;
 const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 const WAIT_TRANSPORT_MARGIN_MS: u64 = 5_000;
+/// `mesh.list_agents` helper deadline. Must match the bridge `LIST_AGENTS_TIMEOUT_MS`.
+const LIST_AGENTS_TIMEOUT_MS: u64 = 30_000;
 
 static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -990,7 +992,8 @@ impl RpcMethod {
         let limits = WireLimitsV1::protocol_v1_0();
         let milliseconds = match self {
             Self::Health => u64::from(limits.health_timeout_ms),
-            Self::ListAgents | Self::InspectTask => u64::from(limits.query_timeout_ms),
+            Self::ListAgents => LIST_AGENTS_TIMEOUT_MS,
+            Self::InspectTask => u64::from(limits.query_timeout_ms),
             Self::ImprovementCase => match required(params, "action")?.as_str() {
                 Some("inspect") => u64::from(limits.query_timeout_ms),
                 Some("improvement_propose" | "improvement_rollback") => {
@@ -2138,7 +2141,7 @@ mod tests {
         );
         assert_eq!(
             RpcMethod::ListAgents.timeout(&empty).unwrap(),
-            Duration::from_secs(5)
+            Duration::from_millis(LIST_AGENTS_TIMEOUT_MS)
         );
         assert_eq!(
             RpcMethod::InspectTask.timeout(&empty).unwrap(),
