@@ -4,6 +4,9 @@ config_version = 1
 
 [settings]
 improvement_enabled = false
+# Optional HTTP(S) proxy for provider CLIs. The scheduled daemon does not
+# inherit interactive-session proxy variables such as HTTPS_PROXY.
+# forward_proxy = "http://127.0.0.1:10808"
 
 [settings.enabled_adapters]
 claude = false

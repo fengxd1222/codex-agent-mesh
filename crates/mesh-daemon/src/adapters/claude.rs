@@ -360,7 +360,7 @@ fn classify_claude_event(value: &Value) -> Vec<NormalizedKind> {
                 })
                 .unwrap_or_default(),
             Some("api_retry") => vec![NormalizedKind::Warning {
-                warning: "Adapter reported a deterministic warning.".into(),
+                warning: "retry: claude api_retry".into(),
             }],
             _ => Vec::new(),
         },

@@ -129,7 +129,10 @@ impl FollowFeed for ReaderFollow<'_> {
         let tasks = self.reader.task_summaries(200, READ_TIMEOUT)?;
         match tasks.into_iter().find(|task| task.task_id == task_id) {
             Some(task) => Ok(is_terminal(&task)),
-            None => Err(StorageError::InvalidRequest),
+            // A busy writer snapshot can omit a still-running task. Do not
+            // treat that as NotFound or the follow console exits while Grok
+            // is still working.
+            None => Ok(false),
         }
     }
 }

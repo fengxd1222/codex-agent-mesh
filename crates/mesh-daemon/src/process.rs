@@ -42,6 +42,11 @@ pub const DEFAULT_PROVIDER_ENV_NAMES: &[&str] = &[
     "COMSPEC",
     "windir",
     "WINDIR",
+    "HTTPS_PROXY",
+    "HTTP_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "GROK_FORWARD_PROXY",
 ];
 
 /// Shared counters for one attempt's stdout/stderr spools.

@@ -263,9 +263,9 @@ fn classify_frame(object: &Map<String, Value>) -> FrameClassification {
             | METHOD_SESSION_PROMPT
             | METHOD_SESSION_CANCEL => FrameClassification::Skip,
             // Vendor extension notifications (grok emits `_x.ai/...`
-            // frames throughout a session) are proven wire shapes, not
-            // warnings.
-            _ if method.starts_with('_') => FrameClassification::Skip,
+            // frames throughout a session). Most are bookkeeping; retry
+            // and prompt-complete failures must surface.
+            _ if method.starts_with('_') => classify_vendor_frame(method, object),
             _ => FrameClassification::Warning,
         };
     }
@@ -366,6 +366,7 @@ fn protocol_error_kind(error: &Value) -> NormalizedKind {
     let (sanitized, _) = sanitize_raw(&serde_json::json!({
         "code": error.get("code").cloned().unwrap_or(Value::Null),
         "message": error.get("message").cloned().unwrap_or(Value::Null),
+        "data": error.get("data").cloned().unwrap_or(Value::Null),
     }));
     let code = match sanitized.get("code") {
         Some(Value::Number(number)) => format!("jsonrpc_{number}"),
@@ -375,9 +376,58 @@ fn protocol_error_kind(error: &Value) -> NormalizedKind {
         .get("message")
         .and_then(Value::as_str)
         .unwrap_or("Adapter reported a protocol error.");
-    NormalizedKind::ProtocolError {
-        code,
-        message: message.into(),
+    let data = sanitized.get("data").and_then(Value::as_str).unwrap_or("");
+    let message = if data.is_empty() {
+        message.to_owned()
+    } else {
+        format!("{message}: {data}")
+    };
+    NormalizedKind::ProtocolError { code, message }
+}
+
+fn classify_vendor_frame(method: &str, object: &Map<String, Value>) -> FrameClassification {
+    let params = object.get("params");
+    if method.ends_with("/prompt_complete") {
+        let stop = params
+            .and_then(|value| value.get("stopReason"))
+            .and_then(Value::as_str);
+        if matches!(stop, Some("error")) {
+            let message = params
+                .and_then(|value| value.get("agentResult"))
+                .and_then(Value::as_str)
+                .unwrap_or("provider prompt failed");
+            return FrameClassification::Events(vec![NormalizedKind::ProtocolError {
+                code: "provider_http".into(),
+                message: message.into(),
+            }]);
+        }
+        return FrameClassification::Skip;
+    }
+    let update = params.and_then(|value| value.get("update")).or(params);
+    match update
+        .and_then(|value| value.get("sessionUpdate"))
+        .and_then(Value::as_str)
+    {
+        Some("retry_state") => {
+            let kind = update
+                .and_then(|value| value.get("type"))
+                .and_then(Value::as_str);
+            let reason = update
+                .and_then(|value| value.get("reason").or_else(|| value.get("message")))
+                .and_then(Value::as_str)
+                .unwrap_or("provider retry");
+            if kind == Some("failed") {
+                FrameClassification::Events(vec![NormalizedKind::ProtocolError {
+                    code: "provider_http".into(),
+                    message: reason.into(),
+                }])
+            } else {
+                FrameClassification::Events(vec![NormalizedKind::Warning {
+                    warning: format!("retry: {reason}"),
+                }])
+            }
+        }
+        _ => FrameClassification::Skip,
     }
 }
 
@@ -517,6 +567,41 @@ mod tests {
                 .iter()
                 .any(|event| matches!(event.kind, NormalizedKind::StateChanged { state } if state == TaskState::Running))
         );
+    }
+
+    #[test]
+    fn acp_grok_retry_and_prompt_failure_surface() {
+        let retrying = decode_acp_line(
+            r#"{"jsonrpc":"2.0","method":"_x.ai/session_notification","params":{"sessionId":"s","update":{"sessionUpdate":"retry_state","type":"retrying","attempt":1,"max_retries":15,"reason":"request error: cli-chat-proxy"}}}"#,
+        );
+        assert!(matches!(
+            &retrying[0].kind,
+            NormalizedKind::Warning { warning } if warning.contains("cli-chat-proxy")
+        ));
+        let failed = decode_acp_line(
+            r#"{"jsonrpc":"2.0","method":"_x.ai/session_notification","params":{"sessionId":"s","update":{"sessionUpdate":"retry_state","type":"failed","error_type":"http","message":"reqwest error stream"}}}"#,
+        );
+        assert!(matches!(
+            &failed[0].kind,
+            NormalizedKind::ProtocolError { code, message }
+                if code == "provider_http" && message.contains("reqwest")
+        ));
+        let complete = decode_acp_line(
+            r#"{"jsonrpc":"2.0","method":"_x.ai/session/prompt_complete","params":{"sessionId":"s","promptId":"p","stopReason":"error","agentResult":"reqwest error stream: cli-chat-proxy"}}"#,
+        );
+        assert!(matches!(
+            &complete[0].kind,
+            NormalizedKind::ProtocolError { code, message }
+                if code == "provider_http" && message.contains("cli-chat-proxy")
+        ));
+        let rpc = decode_acp_line(
+            r#"{"jsonrpc":"2.0","id":4,"error":{"code":-32603,"message":"Internal error","data":"reqwest error stream: cli-chat-proxy"}}"#,
+        );
+        assert!(matches!(
+            &rpc[0].kind,
+            NormalizedKind::ProtocolError { code, message }
+                if code.contains("32603") && message.contains("cli-chat-proxy")
+        ));
     }
 
     #[test]

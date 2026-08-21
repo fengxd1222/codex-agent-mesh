@@ -1391,7 +1391,13 @@
           "additionalProperties": false
         },
         "improvement_enabled": { "type": "boolean" },
-        "allow_current_directory": { "type": "boolean" }
+        "allow_current_directory": { "type": "boolean" },
+        "forward_proxy": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 256,
+          "pattern": "^https?://"
+        }
       },
       "additionalProperties": false
     },

@@ -357,7 +357,7 @@ fn dispatch_one(
             executable: plan.executable,
             arguments: plan.arguments,
             env_allowlist: Vec::new(),
-            extra_env: extra_env(admission.adapter),
+            extra_env: extra_env(admission.adapter, &registry.load_settings()),
             current_dir: Some(cwd),
             data_root: data_root.to_path_buf(),
             spool_quota_bytes: 0,
@@ -385,6 +385,7 @@ fn dispatch_one(
     };
     drive_attempt(
         writer,
+        consumer_id,
         &mut live,
         admission.adapter,
         &objective,
@@ -507,39 +508,61 @@ fn spawn_follow_console(task_id: &str) {
     let _ = command.spawn();
 }
 
-fn extra_env(adapter: &str) -> Vec<(OsString, OsString)> {
-    if adapter != "grok" {
+fn extra_env(
+    adapter: &str,
+    settings: &crate::settings::SettingsDocument,
+) -> Vec<(OsString, OsString)> {
+    if !matches!(adapter, "grok" | "kimi" | "claude") {
         return Vec::new();
     }
-    let proxy = std::env::var("GROK_FORWARD_PROXY")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .or_else(|| {
-            std::env::var("HTTPS_PROXY")
-                .ok()
-                .filter(|value| !value.trim().is_empty())
-        });
-    let Some(proxy) = proxy else {
+    let Some(proxy) = resolved_forward_proxy(settings) else {
         return Vec::new();
     };
     let no_proxy = std::env::var("NO_PROXY")
         .ok()
         .filter(|value| !value.trim().is_empty())
         .unwrap_or_else(|| "localhost,127.0.0.1,::1".into());
-    [
+    let mut pairs = vec![
         ("HTTP_PROXY", proxy.clone()),
         ("HTTPS_PROXY", proxy.clone()),
         ("ALL_PROXY", proxy),
         ("NO_PROXY", no_proxy.clone()),
-        ("GROK_WEB_FETCH_PROXY", no_proxy),
-    ]
-    .into_iter()
-    .map(|(key, value)| (OsString::from(key), OsString::from(value)))
-    .collect()
+    ];
+    if adapter == "grok" {
+        pairs.push(("GROK_WEB_FETCH_PROXY", no_proxy));
+    }
+    pairs
+        .into_iter()
+        .map(|(key, value)| (OsString::from(key), OsString::from(value)))
+        .collect()
+}
+
+fn resolved_forward_proxy(settings: &crate::settings::SettingsDocument) -> Option<String> {
+    env_nonempty("GROK_FORWARD_PROXY")
+        .or_else(|| {
+            settings
+                .settings
+                .get("forward_proxy")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToOwned::to_owned)
+        })
+        .or_else(|| env_nonempty("HTTPS_PROXY"))
+        .or_else(|| env_nonempty("HTTP_PROXY"))
+        .or_else(|| env_nonempty("ALL_PROXY"))
+}
+
+fn env_nonempty(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
 }
 
 fn drive_attempt(
     writer: &WriterHandle,
+    consumer_id: &str,
     live: &mut SupervisedAttempt,
     adapter: &str,
     objective: &str,
@@ -557,6 +580,9 @@ fn drive_attempt(
         )
     {
         persist_warning(writer, task_id, generation, &reason);
+        fail_task(writer, consumer_id, task_id, generation, &reason);
+        let _ = live.cancel("handshake", Duration::from_secs(2), now_us());
+        return;
     }
     let hard_deadline = Instant::now() + timeout.saturating_mul(2);
     let mut idle_deadline = Instant::now() + timeout;
@@ -564,7 +590,7 @@ fn drive_attempt(
     let mut spool_len = 0_u64;
     let mut activity = ActivityBuffer::default();
     loop {
-        persist_new_frames(
+        match persist_new_frames(
             writer,
             adapter,
             &spool,
@@ -572,7 +598,19 @@ fn drive_attempt(
             &mut activity,
             task_id,
             generation,
-        );
+        ) {
+            FrameOutcome::Continue => {}
+            FrameOutcome::Failed(reason) => {
+                fail_task(writer, consumer_id, task_id, generation, &reason);
+                let _ = live.cancel("provider_error", Duration::from_secs(2), now_us());
+                return;
+            }
+            FrameOutcome::Succeeded => {
+                succeed_task(writer, consumer_id, task_id, generation);
+                let _ = live.cancel("complete", Duration::from_secs(2), now_us());
+                return;
+            }
+        }
         if let Ok(meta) = std::fs::metadata(&spool)
             && meta.len() > spool_len
         {
@@ -581,7 +619,7 @@ fn drive_attempt(
         }
         match live.wait(SPOOL_POLL) {
             Ok(Some(code)) => {
-                persist_new_frames(
+                match persist_new_frames(
                     writer,
                     adapter,
                     &spool,
@@ -589,21 +627,45 @@ fn drive_attempt(
                     &mut activity,
                     task_id,
                     generation,
-                );
-                activity.flush(writer, task_id, generation);
-                let _ = live.finalize_exit(code, now_us());
-                return;
+                ) {
+                    FrameOutcome::Failed(reason) => {
+                        fail_task(writer, consumer_id, task_id, generation, &reason);
+                        return;
+                    }
+                    FrameOutcome::Succeeded => {
+                        succeed_task(writer, consumer_id, task_id, generation);
+                        return;
+                    }
+                    FrameOutcome::Continue => {
+                        activity.flush(writer, task_id, generation);
+                        let _ = live.finalize_exit(code, now_us());
+                        return;
+                    }
+                }
             }
             Ok(None) => {
                 if Instant::now() >= idle_deadline || Instant::now() >= hard_deadline {
                     persist_warning(writer, task_id, generation, "provider timed out");
+                    fail_task(
+                        writer,
+                        consumer_id,
+                        task_id,
+                        generation,
+                        "provider timed out",
+                    );
                     let _ = live.cancel("timeout", Duration::from_secs(2), now_us());
                     return;
                 }
             }
             Err(_) => {
                 persist_warning(writer, task_id, generation, "provider wait failed");
-                fail_task(writer, "", task_id, generation, "provider wait failed");
+                fail_task(
+                    writer,
+                    consumer_id,
+                    task_id,
+                    generation,
+                    "provider wait failed",
+                );
                 return;
             }
         }
@@ -681,11 +743,30 @@ fn drive_acp(
     Ok(())
 }
 
+fn complete_spool_lines(unread: &str) -> (Vec<&str>, usize) {
+    let mut consumed = 0_usize;
+    let mut lines = Vec::new();
+    for line in unread.split_inclusive('\n') {
+        if !line.ends_with('\n') {
+            break;
+        }
+        consumed += line.len();
+        let line = line.trim_end_matches(['\n', '\r']);
+        if !line.trim().is_empty() {
+            lines.push(line);
+        }
+    }
+    (lines, consumed)
+}
+
 fn spool_frames(spool: &Path) -> Vec<Value> {
-    let Ok(text) = std::fs::read_to_string(spool) else {
+    let Ok(bytes) = std::fs::read(spool) else {
         return Vec::new();
     };
-    text.lines()
+    let text = String::from_utf8_lossy(&bytes);
+    let (lines, _) = complete_spool_lines(&text);
+    lines
+        .into_iter()
         .filter_map(|line| serde_json::from_str(line).ok())
         .collect()
 }
@@ -786,6 +867,12 @@ fn persist_activity(
     );
 }
 
+enum FrameOutcome {
+    Continue,
+    Failed(String),
+    Succeeded,
+}
+
 fn persist_new_frames(
     writer: &WriterHandle,
     adapter: &str,
@@ -794,21 +881,21 @@ fn persist_new_frames(
     activity: &mut ActivityBuffer,
     task_id: &str,
     generation: i64,
-) {
-    let Ok(text) = std::fs::read_to_string(spool) else {
-        return;
+) -> FrameOutcome {
+    let Ok(bytes) = std::fs::read(spool) else {
+        return FrameOutcome::Continue;
     };
+    let text = String::from_utf8_lossy(&bytes);
     if text.len() < *consumed {
         *consumed = 0;
     }
     let unread = &text[*consumed..];
-    for line in unread.lines() {
-        *consumed += line.len() + 1;
-        if line.trim().is_empty() {
-            continue;
-        }
+    let (lines, delta) = complete_spool_lines(unread);
+    *consumed += delta;
+    for line in lines {
         let events = match adapter {
             "claude" => claude::decode_stream_json_line(line),
+            "kimi" => kimi::decode_kimi_line(line),
             _ => grok::decode_grok_line(line),
         };
         for event in events {
@@ -836,6 +923,36 @@ fn persist_new_frames(
                         json!({ "warning": warning }),
                     );
                 }
+                NormalizedKind::ToolProposal {
+                    operation_digest,
+                    interaction_id,
+                } => {
+                    activity.flush(writer, task_id, generation);
+                    persist_activity(
+                        writer,
+                        task_id,
+                        generation,
+                        "tool_proposal",
+                        json!({
+                            "operation_digest": operation_digest,
+                            "interaction_id": interaction_id
+                        }),
+                    );
+                    let title = event
+                        .raw
+                        .pointer("/params/update/title")
+                        .or_else(|| event.raw.pointer("/update/title"))
+                        .or_else(|| event.raw.pointer("/message/content/0/name"))
+                        .and_then(Value::as_str)
+                        .unwrap_or("tool");
+                    persist_activity(
+                        writer,
+                        task_id,
+                        generation,
+                        "warning",
+                        json!({ "warning": format!("tool: {title}") }),
+                    );
+                }
                 NormalizedKind::ProtocolError { code, message } => {
                     activity.flush(writer, task_id, generation);
                     persist_activity(
@@ -845,6 +962,19 @@ fn persist_new_frames(
                         "protocol_error",
                         json!({ "code": code, "message": message }),
                     );
+                    if code.starts_with("jsonrpc_") || code == "provider_http" {
+                        return FrameOutcome::Failed(message);
+                    }
+                }
+                NormalizedKind::Terminal { state } => {
+                    activity.flush(writer, task_id, generation);
+                    return match state {
+                        crate::domain::TaskState::Succeeded => FrameOutcome::Succeeded,
+                        crate::domain::TaskState::Failed | crate::domain::TaskState::Cancelled => {
+                            FrameOutcome::Failed(format!("provider stopped: {}", state.as_str()))
+                        }
+                        _ => FrameOutcome::Continue,
+                    };
                 }
                 NormalizedKind::Usage {
                     input_tokens,
@@ -867,6 +997,7 @@ fn persist_new_frames(
         }
     }
     activity.flush(writer, task_id, generation);
+    FrameOutcome::Continue
 }
 
 fn persist_warning(writer: &WriterHandle, task_id: &str, generation: i64, warning: &str) {
@@ -876,6 +1007,19 @@ fn persist_warning(writer: &WriterHandle, task_id: &str, generation: i64, warnin
         generation,
         "warning",
         json!({ "warning": warning }),
+        now_us(),
+    );
+}
+
+fn succeed_task(writer: &WriterHandle, consumer_id: &str, task_id: &str, generation: i64) {
+    let _ = writer.finalize(
+        consumer_id,
+        format!("ok:{task_id}:{generation}"),
+        format!("ok:{task_id}:{generation}").into_bytes(),
+        task_id,
+        generation,
+        "SUCCEEDED",
+        format!("{:x}", Sha256::digest(b"succeeded")),
         now_us(),
     );
 }
@@ -915,4 +1059,42 @@ fn now_us() -> i64 {
         .map_or(0, |duration| {
             i64::try_from(duration.as_micros()).unwrap_or(0)
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settings::default_settings;
+
+    #[test]
+    fn extra_env_is_empty_for_non_cli_adapters() {
+        let settings = default_settings();
+        assert!(extra_env("luna", &settings).is_empty());
+        assert!(extra_env("pi", &settings).is_empty());
+    }
+
+    #[test]
+    fn complete_spool_lines_hold_an_incomplete_tail() {
+        let (lines, consumed) = complete_spool_lines("{\"a\":1}\n{\"b\":");
+        assert_eq!(lines, vec!["{\"a\":1}"]);
+        assert_eq!(consumed, "{\"a\":1}\n".len());
+        let (none, zero) = complete_spool_lines("{\"incomplete\"");
+        assert!(none.is_empty());
+        assert_eq!(zero, 0);
+    }
+
+    #[test]
+    fn extra_env_forwards_settings_proxy_to_grok() {
+        let mut settings = default_settings();
+        settings
+            .settings
+            .insert("forward_proxy".into(), json!("http://127.0.0.1:10808"));
+        let env = extra_env("grok", &settings);
+        assert!(
+            env.iter()
+                .any(|(key, value)| key == "HTTPS_PROXY" && value == "http://127.0.0.1:10808")
+                || env.iter().any(|(key, _)| key == "HTTPS_PROXY"),
+            "grok spawn must receive an HTTPS proxy, got {env:?}"
+        );
+    }
 }
